@@ -1,0 +1,8 @@
+prefix=/home/marko/_detection_module2/detection_module/build/devel
+
+Name: detection_module
+Description: Description of detection_module
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/marko/_detection_module2/detection_module/build/devel/lib 
+Requires: 

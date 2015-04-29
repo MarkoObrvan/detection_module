@@ -1,0 +1,6 @@
+<launch>
+
+  <node pkg="detectionModule" type="detection_module_node" name="detection_module_node" output="screen" launch-prefix="gdb -ex run --args">
+  </node>
+
+</launch>

@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: detection_module
+Description: Description of detection_module
+Version: 0.0.0
+Cflags: 
+Libs: -L/usr/local/lib 
+Requires: 

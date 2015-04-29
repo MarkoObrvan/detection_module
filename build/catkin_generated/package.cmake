@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "detection_module")
+set(detection_module_MAINTAINER "marko <marko@todo.todo>")
+set(detection_module_DEPRECATED "")
+set(detection_module_VERSION "0.0.0")
+set(detection_module_BUILD_DEPENDS "roscpp" "rospy" "std_msgs")
+set(detection_module_RUN_DEPENDS "roscpp" "rospy" "std_msgs")
+set(detection_module_BUILDTOOL_DEPENDS "catkin")
