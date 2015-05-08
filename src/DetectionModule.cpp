@@ -367,16 +367,15 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	cv::Mat edge, edge2, draw;
 	
-	
 	const clock_t begin_time = clock();
 	std::cout << "Timestart! " <<float( clock ())/  CLOCKS_PER_SEC<< "  ---";
 	
-	GaussianBlur(last_image_->image, edge2, cv::Size(7,7), 4, 4, 0);
+//	GaussianBlur(last_image_->image, edge2, cv::Size(7,7), 4, 4, 0);
 	//bilateralFilter(last_image_->image, edge2,-1, 50, 7);
 	
 	
-	//Canny( last_image_->image, edge, 60, 120, 3);
-	Canny( edge2, edge, 60, 120, 3);
+	Canny( last_image_->image, edge, 60, 120, 3);
+	//Canny( edge2, edge, 60, 120, 3);
 
 	
 	
@@ -438,7 +437,16 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
   for( int i = 0; i < contours.size(); i++ )
      { 
 	  approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-       boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+	  
+      boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+	  if(boundRect[i].width * boundRect[i].height < 500 || 
+		boundRect[i].width*3<boundRect[i].height ||
+		boundRect[i].width>boundRect[i].height*3){
+			contours.erase(contours.begin()+i);
+			boundRect.erase(boundRect.begin()+i);
+		  i--;
+	  }
+	  
        //minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
      }
 	
@@ -461,7 +469,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	{
 		Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
 		drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
-		rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
+		//rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
 	}
 
 	/// Show in a window
@@ -528,6 +536,7 @@ int main(int argc, char **argv){
 		ros::NodeHandle nh;
 		
 		cv::namedWindow("view");
+		cv::namedWindow("image");
 		cv::namedWindow("disparity color");
 		cv::namedWindow("DisparityEdge");
 		cv::namedWindow("CannyEdge");
@@ -544,6 +553,7 @@ int main(int argc, char **argv){
 		
 		ros::spin();
 		cv::destroyWindow("view");
+		cv::destroyWindow("image");
 		cv::destroyWindow("disparity color");
 		cv::destroyWindow("DisparityEdge");
 		cv::destroyWindow("CannyEdge");
