@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   pcl_conversions
   pcl_ros
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -19,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
  find_package(OpenCV REQUIRED)
  find_package(PCL REQUIRED)
  find_package(sensor_msgs REQUIRED)
+ find_package (Threads)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -110,6 +112,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a cpp executable
 add_executable(detection_module_node src/DetectionModule.cpp)
+#target_link_libraries (detection_module_node${CMAKE_THREAD_LIBS_INIT})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
