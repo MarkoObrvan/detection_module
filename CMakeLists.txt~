@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
- find_package(Boost REQUIRED)
+ find_package(Boost REQUIRED COMPONENTS system thread)
  find_package(OpenCV REQUIRED)
  find_package(PCL REQUIRED)
  find_package(sensor_msgs REQUIRED)
@@ -104,6 +104,7 @@ catkin_package(
 include_directories(${roscpp_INCLUDE_DIRS})
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS})
 
 ## Declare a cpp library
 # add_library(detection_module
@@ -112,7 +113,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a cpp executable
 add_executable(detection_module_node src/DetectionModule.cpp)
-target_link_libraries (pthread)
+#target_link_libraries (detection_module_node${CMAKE_THREAD_LIBS_INIT})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -126,6 +127,7 @@ target_link_libraries (pthread)
   ${GTK2_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
+target_link_libraries(correspondence_grouping ${catkin_LIBRARIES} ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so )
 
 #############
 ## Install ##

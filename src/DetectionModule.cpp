@@ -7,6 +7,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 
+#include <string>
 
 #include <cv_bridge/cv_bridge.h>
 #include "stereo_msgs/DisparityImage.h"
@@ -23,15 +24,19 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/transform_broadcaster.h>
+#include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/common_headers.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/cloud_viewer.h>
 
+#include <cv.h>
+#include <highgui.h>
 
 #include <iostream>
 
 #include "boost/multi_array.hpp"
+#include <boost/thread/thread.hpp>
 
 #define THRESHOLD 8
 #define VERTICAL_MERGE_BOUNDARY 20
@@ -39,6 +44,8 @@
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 pcl::visualization::CloudViewer viewer ("Simple Cloud Viewer");
+//boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+//boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 
 using namespace sensor_msgs;
 using namespace message_filters;
@@ -306,6 +313,22 @@ static unsigned char colormap[768] =
 };
 
 
+
+//This function creates a PCL visualizer, sets the point cloud to view and returns a pointer
+boost::shared_ptr<pcl::visualization::PCLVisualizer> createVisualizer (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud)
+{
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+  viewer->setBackgroundColor (0, 0, 0);
+  pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(cloud);
+  viewer->addPointCloud<pcl::PointXYZRGB> (cloud, rgb, "reconstruction");
+  //viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "reconstruction");
+  viewer->addCoordinateSystem ( 1.0 );
+  viewer->initCameraParameters ();
+  return (viewer);
+}
+
+
+
 void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity_msg, const sensor_msgs::ImageConstPtr& left_msg)
 {
 	
@@ -347,6 +370,20 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	std::cout<< "P2" << P2 << std::endl;
 	*/
 	
+	cv::Mat_<double> Q(4,4);
+	Q<<	1, 0, 0, -653.0797576904297,
+  		0, 1, 0, -472.968132019043,
+  		0, 0, 0, 818.8397037797508,
+  		0, 0, 4.176694655336997, -0;
+	
+	double Q03, Q13, Q23, Q32, Q33;
+ 	Q03 = Q.at<double>(0,3);
+ 	Q13 = Q.at<double>(1,3);
+ 	Q23 = Q.at<double>(2,3);
+  	Q32 = Q.at<double>(3,2);
+ 	Q33 = Q.at<double>(3,3);
+
+	
 	
 	
 	int CONTUR_LENGTH_THRESHOLD = 60;
@@ -374,27 +411,23 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	//bilateralFilter(last_image_->image, edge2,-1, 50, 7);
 	
 	
-	Canny( last_image_->image, edge, 60, 120, 3);
+	//Canny( last_image_->image, edge, 60, 120, 3);
 	//Canny( edge2, edge, 60, 120, 3);
 
 	
-	
-	
+	/*
 	edge.convertTo(draw, CV_8U);
 	cv::imshow("CannyEdge", draw);
 	
 	std::cout << float( clock () - begin_time ) / (double) CLOCKS_PER_SEC<<"    ";
 	
 	
-	
-	
-	
-	
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	
-	  /// Find contours
 	findContours( edge, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) ); //CV_RETR_EXTERNAL  CV_RETR_TREE
+	*(
+	
 	
 	//Remove small conturs
 	
@@ -428,7 +461,12 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	}
 	*/
 	
+	
+	
+	/*
 	  /// Approximate contours to polygons + get bounding rects and circles
+	  /// finding conturs takes too much time, not god for rest of processing
+	  
   vector<vector<Point> > contours_poly( contours.size() );
   vector<Rect> boundRect( contours.size() );
   vector<Point2f>center( contours.size() );
@@ -450,7 +488,24 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
        //minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
      }
 	
-	/*
+
+
+	/// Draw contours
+	Mat drawing = Mat::zeros( edge.size(), CV_8UC3 );
+	for( int i = 0; i< contours.size(); i++ )
+	{
+		Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+		drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
+
+	}
+
+	/// Show in a window
+
+	imshow( "Contours", drawing );
+	*/
+	
+	
+		/*
 	int iterMoment=0;
 	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
 	{
@@ -462,19 +517,6 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		iterMoment++;
 	}
 	*/
-
-	/// Draw contours
-	Mat drawing = Mat::zeros( edge.size(), CV_8UC3 );
-	for( int i = 0; i< contours.size(); i++ )
-	{
-		Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-		drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
-		//rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
-	}
-
-	/// Show in a window
-
-	imshow( "Contours", drawing );
 	
 	
 	
@@ -501,31 +543,139 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					disparity_color_(row, col)[2]=0;
 					disparity_color_(row, col)[1]=0;
 					disparity_color_(row, col)[0]=0;
-					dispar.at<uchar>(row, col, CV_8U) = 0;
+					dispar.at<char>(row, col, CV_8U) = 0;
 					continue;
 				}
 				
 				int index = (d[col] - min_disparity) * multiplier + 0.5;
 				index = std::min(255, std::max(0, index));
 				// Fill as BGR
+			/*
 				disparity_color_(row, col)[2] = colormap[3*index + 0];
 				disparity_color_(row, col)[1] = colormap[3*index + 1];
 				disparity_color_(row, col)[0] = colormap[3*index + 2];
-				dispar.at<uchar>(row, col, CV_8U) = index;
+				*/
+			
+				disparity_color_(row, col)[2] = index*2;
+				disparity_color_(row, col)[1] = index*2;
+				disparity_color_(row, col)[0] = index*2;
+				dispar.at<char>(row, col, CV_8U) = index;
 			}
 		}
+	
+	
+
+	
+	double alpha = 0.8; double beta;
+	beta = ( 1.0 - alpha );
+	cv::Mat merge, mergeb;
+	
+	GaussianBlur(dispar, dispar, cv::Size(5,5), 4, 4, 0);
+	
+	cv::addWeighted( last_image_->image, alpha, dispar, beta, 0.0, merge);
+	GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
+	bilateralFilter(merge, mergeb, 4, 40, 7);
+	cv::imshow("image", mergeb);
+	std::cout<<"ARRIVED HERE!"<<std::endl;
+	
+	//GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
+	//bilateralFilter(merge, mergeb,60, 50, 7);
+	
+	Canny( mergeb, edge, 50, 150, 3);
+	cv::imshow("CannyEdge", edge);
+	
+	
 	
 	cv::imshow("disparity color", disparity_color_);
 	cv::imshow("view", dispar);
 	
 	cv::Mat disparityCanny;
-	Canny( dispar, disparityCanny, 20, 100, 3);
+	Canny( dispar, disparityCanny, 20, 60, 3);
 	cv::imshow("DisparityEdge", disparityCanny);
 	
-	
+	/* //Image merging
+	double alpha = 0.5; double beta;
+	beta = ( 1.0 - alpha );
+	cv::Mat merge;
+	addWeighted( disparityCanny, alpha, edge, beta, 0.0, merge);
+	cv::imshow("view", merge);
+	*/
 	
 	std::cout << "Whole function time lapse:   " <<float( clock () - begin_time ) / (double) CLOCKS_PER_SEC<<std::endl;
 	std::cout << " Timend! " <<float( clock ())/  CLOCKS_PER_SEC<<std::endl;
+	
+	
+	
+	
+	
+	/*
+
+working 3D reconstruction for testing purposes
+
+  //Create matrix that will contain 3D corrdinates of each pixel
+  cv::Mat recons3D(dispar.size(), CV_32FC3);
+  
+  //Reproject image to 3D
+  std::cout << "Reprojecting image to 3D..." << std::endl;
+  cv::reprojectImageTo3D( dispar, recons3D, Q, false, CV_32F );
+
+  //Create point cloud and fill it
+  std::cout << "Creating Point Cloud..." <<std::endl;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+  
+  double px, py, pz;
+  uchar pr, pg, pb;
+  
+  for (int i = 0; i < dispar.rows; i++)
+  {
+    char* rgb_ptr = dispar.ptr<char>(i);
+
+    char* disp_ptr = dispar.ptr<char>(i);
+
+    for (int j = 0; j < dispar.cols; j++)
+    {
+      //Get 3D coordinates
+		
+      uchar d = disp_ptr[j];
+		
+		
+      if ( d == 0 ) continue; //Discard bad pixels
+		
+		
+      double pw = -1.0 * static_cast<double>(d) * Q32 + Q33; 
+      px = static_cast<double>(j) + Q03;
+      py = static_cast<double>(i) + Q13;
+      pz = Q23;
+	  
+      
+      px = -1*px/pw;
+      py = py/pw;
+      pz = pz/pw;
+
+      
+      //Get RGB info
+      pb = 255;
+      pg = 255;
+      pr = 255;
+      
+      //Insert info into point cloud structure
+      pcl::PointXYZRGB point;
+      point.x = px;
+      point.y = py;
+      point.z = pz;
+      uint32_t rgb = (static_cast<uint32_t>(pr) << 16 |
+              static_cast<uint32_t>(pg) << 8 | static_cast<uint32_t>(pb));
+      point.rgb = *reinterpret_cast<float*>(&rgb);
+      point_cloud_ptr->points.push_back (point);
+    }
+  }
+  point_cloud_ptr->width = (int) point_cloud_ptr->points.size();
+  point_cloud_ptr->height = 1;
+
+	
+    viewer.showCloud (point_cloud_ptr);
+	
+	*/
 	
 	
 }
@@ -540,15 +690,25 @@ int main(int argc, char **argv){
 		cv::namedWindow("disparity color");
 		cv::namedWindow("DisparityEdge");
 		cv::namedWindow("CannyEdge");
-		cv::namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+		//cv::namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
 		cv::startWindowThread();
 		
 		message_filters::Subscriber<stereo_msgs::DisparityImage> disp_sub(nh, "/camera/stereo_camera_LR/disparity", 1);
- 		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/left/image_raw", 1);
+ 		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/right/image_raw", 1);
 		
 		typedef sync_policies::ApproximateTime<stereo_msgs::DisparityImage, Image> MySyncPolicy; 
 		Synchronizer<MySyncPolicy> sync(MySyncPolicy(20), disp_sub, left_sub); 
-		
+	
+	
+	/*
+		viewer->setBackgroundColor (0, 0, 0);
+		pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(point_cloud_ptr );
+		viewer->addPointCloud<pcl::PointXYZRGB> (point_cloud_ptr , rgb, "reconstruction");
+		viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "reconstruction");
+		viewer->addCoordinateSystem ( 1.0 );
+		viewer->initCameraParameters ();
+		*/
+	
 		sync.registerCallback(boost::bind(&disparityImageCallback, _1, _2));
 		
 		ros::spin();
