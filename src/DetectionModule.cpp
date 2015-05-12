@@ -6,6 +6,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+//#include < opencv2/video/background_segm.hpp> 
 
 #include <string>
 
@@ -43,7 +44,13 @@
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-pcl::visualization::CloudViewer viewer ("Simple Cloud Viewer");
+//ovaj
+//pcl::visualization::CloudViewer viewer ("Simple Cloud Viewer");
+
+
+
+
+
 //boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
 //boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 
@@ -54,25 +61,7 @@ using namespace cv;
 RNG rng(12345);
 
 static unsigned char colormap[768] =
-{ 150, 150, 150,
-107, 0, 12,
-106, 0, 18,
-105, 0, 24,
-103, 0, 30,
-102, 0, 36,
-101, 0, 42,
-99, 0, 48,
-98, 0, 54,
-97, 0, 60,
-96, 0, 66,
-94, 0, 72,
-93, 0, 78,
-92, 0, 84,
-91, 0, 90,
-89, 0, 96,
-88, 0, 102,
-87, 0, 108,
-85, 0, 114,
+{ 150, 150, 150,	107, 0, 12,		106, 0, 18,		105, 0, 24,		103, 0, 30,	102, 0, 36,		101, 0, 42,		99, 0, 48,	98, 0, 54,	97, 0, 60,	96, 0, 66,	94, 0, 72,	93, 0, 78,		92, 0, 84,		91, 0, 90,	89, 0, 96,		88, 0, 102,		87, 0, 108,	85, 0, 114,
 84, 0, 120,
 83, 0, 126,
 82, 0, 131,
@@ -314,6 +303,39 @@ static unsigned char colormap[768] =
 
 
 
+
+enum Direction{
+    ShiftUp=1, ShiftRight, ShiftDown, ShiftLeft
+   };
+
+cv::Mat shiftFrame(cv::Mat frame, int pixels, Direction direction)
+{
+    //create a same sized temporary Mat with all the pixels flagged as invalid (-1)
+    cv::Mat temp = cv::Mat::zeros(frame.size(), frame.type());
+
+    switch (direction)
+    {
+    case(ShiftUp) :
+        frame(cv::Rect(0, pixels, frame.cols, frame.rows - pixels)).copyTo(temp(cv::Rect(0, 0, temp.cols, temp.rows - pixels)));
+        break;
+    case(ShiftRight) :
+        frame(cv::Rect(0, 0, frame.cols - pixels, frame.rows)).copyTo(temp(cv::Rect(pixels, 0, frame.cols - pixels, frame.rows)));
+        break;
+    case(ShiftDown) :
+        frame(cv::Rect(0, 0, frame.cols, frame.rows - pixels)).copyTo(temp(cv::Rect(0, pixels, frame.cols, frame.rows - pixels)));
+        break;
+    case(ShiftLeft) :
+        frame(cv::Rect(pixels, 0, frame.cols - pixels, frame.rows)).copyTo(temp(cv::Rect(0, 0, frame.cols - pixels, frame.rows)));
+        break;
+    default:
+        std::cout << "Shift direction is not set properly" << std::endl;
+    }
+
+    return temp;
+}
+
+
+
 //This function creates a PCL visualizer, sets the point cloud to view and returns a pointer
 boost::shared_ptr<pcl::visualization::PCLVisualizer> createVisualizer (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud)
 {
@@ -329,7 +351,7 @@ boost::shared_ptr<pcl::visualization::PCLVisualizer> createVisualizer (pcl::Poin
 
 
 
-void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity_msg, const sensor_msgs::ImageConstPtr& left_msg)
+void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity_msg, const sensor_msgs::ImageConstPtr& left_msg, const sensor_msgs::ImageConstPtr& right_msg)
 {
 	
 	/*
@@ -382,13 +404,9 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
  	Q23 = Q.at<double>(2,3);
   	Q32 = Q.at<double>(3,2);
  	Q33 = Q.at<double>(3,3);
-
-	
 	
 	
 	int CONTUR_LENGTH_THRESHOLD = 60;
-	
-	//std::cout <<"In callback"<<std::endl;
 	
 	ros::NodeHandle nh;
 	ros::Publisher publisher = nh.advertise<sensor_msgs::PointCloud2> ("FromDisparityToWorld", 10);
@@ -399,8 +417,19 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	msg->header.frame_id = "3D";
 	int g=0;
 	cv_bridge::CvImagePtr last_image_;
+	cv_bridge::CvImagePtr last_image_R;
 	
 	last_image_ = cv_bridge::toCvCopy(left_msg, sensor_msgs::image_encodings::MONO8);
+	last_image_R = cv_bridge::toCvCopy(right_msg, sensor_msgs::image_encodings::MONO8);
+	
+	
+	//cv::Mat right = shiftFrame(last_image_R->image, 0, ShiftRight);
+	//cv::Mat left = shiftFrame(last_image_->image, 0, ShiftLeft);
+		
+	
+	//cv::imshow("imageR", right);
+	//cv::imshow("imageL", left);
+	
 	
 	cv::Mat edge, edge2, draw;
 	
@@ -540,9 +569,9 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		for (int col = 0; col < disparity_color_.cols; ++col) {
 				
 			if(d[col]==-1){
-					disparity_color_(row, col)[2]=0;
-					disparity_color_(row, col)[1]=0;
-					disparity_color_(row, col)[0]=0;
+					//disparity_color_(row, col)[2]=0;
+					//disparity_color_(row, col)[1]=0;
+					//disparity_color_(row, col)[0]=0;
 					dispar.at<char>(row, col, CV_8U) = 0;
 					continue;
 				}
@@ -555,39 +584,141 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 				disparity_color_(row, col)[1] = colormap[3*index + 1];
 				disparity_color_(row, col)[0] = colormap[3*index + 2];
 				*/
-			
-				disparity_color_(row, col)[2] = index*2;
-				disparity_color_(row, col)[1] = index*2;
-				disparity_color_(row, col)[0] = index*2;
+
 				dispar.at<char>(row, col, CV_8U) = index;
 			}
 		}
 	
 	
+	cv::Mat left = shiftFrame(last_image_R->image, 0, ShiftLeft);
+	cv::Mat leftZ (dispar.rows, dispar.cols,CV_8U);
+	
+	
+	int count=0;
+	for (int row = 1; row < dispar.rows-1; ++row) {
+		
+		const char* cMid = left.ptr<char>(row);
+		const char* cTop = left.ptr<char>(row-1);
+		const char* cBot = left.ptr<char>(row+1);
+		
+		const char* dMid = dispar.ptr<char>(row);
+		const char* dTop = dispar.ptr<char>(row-1);
+		const char* dBot = dispar.ptr<char>(row+1);
+		
+		for (int col = 1; col < dispar.cols-1; ++col) {
+			
+			if(cMid[col] == 0) continue;
+			
+			double step = dMid[col] - (dMid[col-1]+dMid[col+1]+dTop[col]+dTop[col-1]+dTop[col+1] + dBot[col]+ dBot[col-1]+ dBot[col+1])/((double) 8);
+			
+			
+
+			
+			if(step<2 && step>-2 && dMid[col]!=0){
+			//if(dMid[col] != 0){	
+				count++;
+				
+				/*				
+				leftZ.at<char>(row, col, CV_8U) = 	(left.at<char>(row, col, CV_8U) +
+													left.at<char>(row-1, col-1, CV_8U) +
+													left.at<char>(row-1, col+1, CV_8U) +
+													left.at<char>(row-1, col, CV_8U) +
+
+													left.at<char>(row, col+1, CV_8U) +
+													left.at<char>(row, col-1, CV_8U) +
+
+													left.at<char>(row+1, col-1, CV_8U) +
+													left.at<char>(row+1, col+1, CV_8U) +
+													left.at<char>(row+1, col, CV_8U)  ) /9;
+													*/
+					
+				
+				/*
+				left.at<char>(row, col, CV_8U) = 	( 4*left.at<char>(row, col, CV_8U) +
+													left.at<char>(row-1, col-1, CV_8U) +
+													left.at<char>(row-1, col+1, CV_8U) +
+													2*left.at<char>(row-1, col, CV_8U) +
+
+													2*left.at<char>(row, col+1, CV_8U) +
+													2*left.at<char>(row, col-1, CV_8U) +
+
+													left.at<char>(row+1, col-1, CV_8U) +
+													left.at<char>(row+1, col+1, CV_8U) +
+													2*left.at<char>(row+1, col, CV_8U)  ) /16;
+													*/
+													
+				
+				//leftZ.at<char>(row, col, CV_8U) =  (dMid[col] + 4*left.at<char>(row, col, CV_8U))/5;
+				
+				/*				
+				leftZ.at<char>(row, col, CV_8U) = 	( 2*left.at<char>(row, col, CV_8U) +
+													left.at<char>(row-1, col-1, CV_8U) +
+													left.at<char>(row-1, col+1, CV_8U) +
+													2*left.at<char>(row-1, col, CV_8U) +
+
+													2*left.at<char>(row, col+1, CV_8U) +
+													2*left.at<char>(row, col-1, CV_8U) +
+
+													left.at<char>(row+1, col-1, CV_8U) +
+													left.at<char>(row+1, col+1, CV_8U) +
+													2*left.at<char>(row+1, col, CV_8U)  ) /14;
+													*/
+												
+				
+				/*
+				leftZ.at<char>(row-1, col-1, CV_8U) = left.at<char>(row-1, col-1, CV_8U) - (left.at<char>(row-1, col-1, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				leftZ.at<char>(row-1, col+1, CV_8U) = left.at<char>(row-1, col+1, CV_8U) - (left.at<char>(row-1, col+1, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				leftZ.at<char>(row-1, col, CV_8U) = left.at<char>(row-1, col, CV_8U) - (left.at<char>(row-1, col, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				
+				leftZ.at<char>(row, col+1, CV_8U) = left.at<char>(row, col+1, CV_8U) - (left.at<char>(row, col+1, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				leftZ.at<char>(row, col-1, CV_8U) = left.at<char>(row, col-1, CV_8U) - (left.at<char>(row, col-1, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				leftZ.at<char>(row, col, CV_8U) = left.at<char>(row, col, CV_8U);
+				
+				leftZ.at<char>(row+1, col-1, CV_8U) = left.at<char>(row+1, col-1, CV_8U) - (left.at<char>(row+1, col-1, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				leftZ.at<char>(row+1, col+1, CV_8U) = left.at<char>(row+1, col+1, CV_8U) - (left.at<char>(row+1, col+1, CV_8U) - left.at<char>(row, col, CV_8U))/2;
+				leftZ.at<char>(row+1, col, CV_8U)   = left.at<char>(row+1, col, CV_8U)   - (left.at<char>(row+1, col, CV_8U)   - left.at<char>(row, col, CV_8U))/2;
+				*/
+				
+				}
+			
+			else
+			{
+				leftZ.at<char>(row, col, CV_8U) = left.at<char>(row-1, col, CV_8U); //leftZ.at<char>(row-1, col, CV_8U);
+			}
+				leftZ.at<char>(row, col, CV_8U) = left.at<char>(row, col, CV_8U) ;
+			}
+		}
+	std::cout << "Blurs: " <<count<<std::endl;
+	
+	cv::imshow("view", leftZ);
+	cv::imshow("image", last_image_->image);
 
 	
-	double alpha = 0.8; double beta;
+	double alpha = 0.7; double beta;
 	beta = ( 1.0 - alpha );
 	cv::Mat merge, mergeb;
 	
-	GaussianBlur(dispar, dispar, cv::Size(5,5), 4, 4, 0);
+	//GaussianBlur(dispar, dispar, cv::Size(5,5), 4, 4, 0);
+	cv::addWeighted( last_image_->image, alpha, last_image_R->image, beta, 0.0, merge);
 	
-	cv::addWeighted( last_image_->image, alpha, dispar, beta, 0.0, merge);
-	GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
+	alpha=0.8;
+	//cv::addWeighted( last_image_->image, alpha, dispar, beta, 0.0, merge);
+//	GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
 	bilateralFilter(merge, mergeb, 4, 40, 7);
-	cv::imshow("image", mergeb);
-	std::cout<<"ARRIVED HERE!"<<std::endl;
+	//cv::imshow("image", mergeb);
+
 	
 	//GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
 	//bilateralFilter(merge, mergeb,60, 50, 7);
 	
-	Canny( mergeb, edge, 50, 150, 3);
+//	Canny( mergeb, edge, 50, 150, 3);
+	Canny( leftZ, edge, 50, 150, 3);
 	cv::imshow("CannyEdge", edge);
 	
 	
 	
-	cv::imshow("disparity color", disparity_color_);
-	cv::imshow("view", dispar);
+	cv::imshow("disparity color", dispar);
+	
 	
 	cv::Mat disparityCanny;
 	Canny( dispar, disparityCanny, 20, 60, 3);
@@ -603,8 +734,6 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	std::cout << "Whole function time lapse:   " <<float( clock () - begin_time ) / (double) CLOCKS_PER_SEC<<std::endl;
 	std::cout << " Timend! " <<float( clock ())/  CLOCKS_PER_SEC<<std::endl;
-	
-	
 	
 	
 	
@@ -687,17 +816,22 @@ int main(int argc, char **argv){
 		
 		cv::namedWindow("view");
 		cv::namedWindow("image");
+		cv::namedWindow("imageR");
+		cv::namedWindow("imageL");
 		cv::namedWindow("disparity color");
 		cv::namedWindow("DisparityEdge");
 		cv::namedWindow("CannyEdge");
 		//cv::namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+		cv::namedWindow("OpticalFlowFarneback");
+	
 		cv::startWindowThread();
 		
 		message_filters::Subscriber<stereo_msgs::DisparityImage> disp_sub(nh, "/camera/stereo_camera_LR/disparity", 1);
- 		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/right/image_raw", 1);
+ 		message_filters::Subscriber<Image> right_sub(nh, "/camera/stereo_camera_LR/right/image_raw", 1);
+		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/left/image_raw", 1);
 		
-		typedef sync_policies::ApproximateTime<stereo_msgs::DisparityImage, Image> MySyncPolicy; 
-		Synchronizer<MySyncPolicy> sync(MySyncPolicy(20), disp_sub, left_sub); 
+		typedef sync_policies::ApproximateTime<stereo_msgs::DisparityImage, Image, Image> MySyncPolicy; 
+		Synchronizer<MySyncPolicy> sync(MySyncPolicy(40), disp_sub, left_sub, right_sub); 
 	
 	
 	/*
@@ -709,15 +843,18 @@ int main(int argc, char **argv){
 		viewer->initCameraParameters ();
 		*/
 	
-		sync.registerCallback(boost::bind(&disparityImageCallback, _1, _2));
+		sync.registerCallback(boost::bind(&disparityImageCallback, _1, _2, _3));
 		
 		ros::spin();
 		cv::destroyWindow("view");
 		cv::destroyWindow("image");
+		cv::destroyWindow("imageR");
+		cv::destroyWindow("imageR");
 		cv::destroyWindow("disparity color");
 		cv::destroyWindow("DisparityEdge");
 		cv::destroyWindow("CannyEdge");
 		cv::destroyWindow("Contours");
+		cv::destroyWindow("OpticalFlowFarneback");
 }
 
 
