@@ -1,3 +1,12 @@
+/*
+
+ROS_NAMESPACE=/camera/stereo_camera_LR rosrun stereo_image_proc stereo_image_proc _approximate_sync:=True _prefilter_size:=9 _prefilter_cap:=31 _correlation_window_size:=51 _min_disparity:=0 _disparity_range:=128 _uniqueness_ratio:=4 _texture_threshold:=10 _speckle_size:=300 _speckle_range:=15
+rosrun image_view stereo_view stereo:=camera/stereo_camera_LR  image:=image_rect_color
+
+roslaunch bumblebee_xb3_gdb.launch
+*/
+
+
 #include <ros/ros.h>
 
 #include <image_transport/image_transport.h>
@@ -593,9 +602,16 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	cv::Mat left = shiftFrame(last_image_R->image, 0, ShiftLeft);
 	cv::Mat leftZ (dispar.rows, dispar.cols,CV_8U);
 	
+	cv::Mat subImg = left(cv::Range(0, left.rows/2), cv::Range(0, left.cols));
+	GaussianBlur(subImg, subImg, cv::Size(7,7), -1, -1, 0);
+	cv::imshow("view", left);
+	
+	cv::Mat disparityCanny;
+	Canny( dispar, disparityCanny, 20, 60, 3);
+	cv::imshow("DisparityEdge", disparityCanny);
 	
 	int count=0;
-	for (int row = 1; row < dispar.rows-1; ++row) {
+	for (int row = 2; row < dispar.rows-2; ++row) {
 		
 		const char* cMid = left.ptr<char>(row);
 		const char* cTop = left.ptr<char>(row-1);
@@ -605,17 +621,43 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		const char* dTop = dispar.ptr<char>(row-1);
 		const char* dBot = dispar.ptr<char>(row+1);
 		
-		for (int col = 1; col < dispar.cols-1; ++col) {
+		for (int col = 2; col < dispar.cols-2; ++col) {
 			
 			if(cMid[col] == 0) continue;
 			
-			double step = dMid[col] - (dMid[col-1]+dMid[col+1]+dTop[col]+dTop[col-1]+dTop[col+1] + dBot[col]+ dBot[col-1]+ dBot[col+1])/((double) 8);
+			//double step = dMid[col] - (dMid[col-1]+dMid[col+1]+dTop[col]+dTop[col-1]+dTop[col+1] + dBot[col]+ dBot[col-1]+ dBot[col+1])/((double) 8);
 			
+			int midF=1;
 			
+			for(int z=0; z<2; z++){
+				
+				if(z!=0){
+				
+					if (disparityCanny.at<char>(row+z, col, CV_8U) == 255 || 
+					  	disparityCanny.at<char>(row-z, col, CV_8U) == 255 || 
+					  	disparityCanny.at<char>(row, col+z, CV_8U) == 255 || 
+					   	disparityCanny.at<char>(row, col-z, CV_8U) == 255 ){
+						
+						midF=0;
+						break;
+					
+					}
+				}
+				
+				
+				else{
+					if (disparityCanny.at<char>(row, col, CV_8U) == 255){
+						midF=0;
+						break;
+					}
+				}
+				
+			}
 
 			
-			if(step<2 && step>-2 && dMid[col]!=0){
+			//if(step<2 && step>-2 && dMid[col]>1){
 			//if(dMid[col] != 0){	
+			if(midF == 1){	
 				count++;
 				
 				/*				
@@ -650,8 +692,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 				
 				//leftZ.at<char>(row, col, CV_8U) =  (dMid[col] + 4*left.at<char>(row, col, CV_8U))/5;
 				
-				/*				
-				leftZ.at<char>(row, col, CV_8U) = 	( 2*left.at<char>(row, col, CV_8U) +
+							
+				leftZ.at<char>(row, col, CV_8U) = 	( 1*left.at<char>(row, col, CV_8U) +
 													left.at<char>(row-1, col-1, CV_8U) +
 													left.at<char>(row-1, col+1, CV_8U) +
 													2*left.at<char>(row-1, col, CV_8U) +
@@ -661,8 +703,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 
 													left.at<char>(row+1, col-1, CV_8U) +
 													left.at<char>(row+1, col+1, CV_8U) +
-													2*left.at<char>(row+1, col, CV_8U)  ) /14;
-													*/
+													2*left.at<char>(row+1, col, CV_8U)  ) /13;
+													
 												
 				
 				/*
@@ -685,12 +727,14 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 			{
 				leftZ.at<char>(row, col, CV_8U) = left.at<char>(row-1, col, CV_8U); //leftZ.at<char>(row-1, col, CV_8U);
 			}
-				leftZ.at<char>(row, col, CV_8U) = left.at<char>(row, col, CV_8U) ;
+				//leftZ.at<char>(row, col, CV_8U) = left.at<char>(row, col, CV_8U) ;
 			}
 		}
 	std::cout << "Blurs: " <<count<<std::endl;
 	
-	cv::imshow("view", leftZ);
+	
+	GaussianBlur(leftZ, leftZ, cv::Size(7,7), -1, -1, 0);
+	//cv::imshow("view", leftZ);
 	cv::imshow("image", last_image_->image);
 
 	
@@ -713,6 +757,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 //	Canny( mergeb, edge, 50, 150, 3);
 	Canny( leftZ, edge, 50, 150, 3);
+	
+
 	cv::imshow("CannyEdge", edge);
 	
 	
@@ -720,9 +766,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	cv::imshow("disparity color", dispar);
 	
 	
-	cv::Mat disparityCanny;
-	Canny( dispar, disparityCanny, 20, 60, 3);
-	cv::imshow("DisparityEdge", disparityCanny);
+
 	
 	/* //Image merging
 	double alpha = 0.5; double beta;
