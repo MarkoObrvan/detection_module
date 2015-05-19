@@ -485,20 +485,21 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	
 
-	/*
+	
 	for (int row = 0; row < edge.rows-1; ++row) {
-		edge.at<uchar>(row, 0) =  255;
+		edge.at<uchar>(row, 1) =  0;
 		edge.at<uchar>(row, edge.cols-1) =  0;
+		edge.at<uchar>(row, edge.cols-2) =  0;
 
 	}
 	
 
 	
 	for (int col = 0; col < edge.cols-1; ++col) {
-		edge.at<uchar>(0, col) =  0;
+		edge.at<uchar>(1, col) =  0;
 		edge.at<uchar>(edge.rows-1, col) =  0;
 	}
-	*/
+	
 	
 
 	
