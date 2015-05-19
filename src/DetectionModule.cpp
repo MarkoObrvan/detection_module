@@ -129,7 +129,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	cv::Mat dist_coeffs1 = (Mat_<float>(1,5) <<-0.34760090909684316, 0.13893127178322365, 0.0002624157294778045, 0.00017474106031351618, 0);
 	cv::Mat dist_coeffs2 = (Mat_<double>(1,5) <<-0.34299615135008976, 0.13066865403875236, 0.0005705026352960487, -0.0002575017480093701, 0);
 	cv::Mat R = (Mat_<double>(3,3) <<0.9999985657944156, 0.0008153120094810814, -0.0014844781692219457, -0.0008129287740475245, 0.999998381025527, 0.0016053327159822335,0.0014857846129322403, -0.0016041236385868848, 0.999997609612859);
-	cv::Mat T = (Mat_<double>(3,1) <<-0.2394236026388935, 0.00027744418645133785, 7.347465192346994e-05);
+	cv::Mat T = (Mat_<double>(3,1) <<-0.2394236026388935, 0.00027744418645254785, 7.347465192346994e-05);
 	*/
 	
 	/*
@@ -146,7 +146,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	distCoeffs2   << -0.34299615135008976, 0.13066865403875236, 0.0005705026352960487, -0.0002575017480093701, 0;
 	R << 0.9999985657944156, 0.0008153120094810814, -0.0014844781692219457,
 	-0.0008129287740475245, 0.999998381025527, 0.0016053327159822335,0.0014857846129322403, -0.0016041236385868848, 0.999997609612859;
-	T << -0.2394236026388935, 0.00027744418645133785, 7.347465192346994e-05;
+	T << -0.2394236026388935, 0.00027744418645254785, 7.347465192346994e-05;
 
 	cv::Mat R1,R2,P1,P2,Q;
 	
@@ -229,7 +229,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	vector<Vec4i> hierarchy;
 	
 	findContours( edge, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) ); //CV_RETR_EXTERNAL  CV_RETR_TREE
-	*(
+	
 	
 	
 	//Remove small conturs
@@ -391,10 +391,6 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		*/
 	
 	
-	GaussianBlur(last_image_->image, edge2, cv::Size(7,7), -1, -1, 0);
-	Canny( edge2, edge, 60, 120, 3);
-	cv::imshow("CannyEdge", edge);
-	
 	//BLOCK B1
 
 	double pz;
@@ -410,7 +406,15 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	cv::Mat widthMap (dispar.rows, dispar.cols, CV_32F);
 	
 	
+	cv::Mat merge;
 	
+	
+	
+	//SWITCH IMAGE HERE!!!
+	
+	//GaussianBlur(last_image_->image, merge, cv::Size(3,3), -1, -1, 0);
+	Canny( last_image_->image, edge, 50, 150, 3);
+	cv::imshow("CannyEdge", edge);
 	
 	
 	for (int i = 0; i < dispar.rows; ++i)
@@ -435,59 +439,38 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 			
 			//std::cout<< "pz: "<< pz << "  py: " << py << "  px: " << px << std::endl;
 			
-			dispar.at<char>(i, j, CV_8U) = (char) (std::min(255.0 , pz)); //std::min(255, std::max(0, index));
+			//std::min(255, std::max(0, index));
 			
 			depthMap.at<float>(i, j) =  pz;
 			heightMap.at<float>(i, j) = py;
 			widthMap.at<float>(i, j) =  px; //widthMap.at<float>(i, j, CV_32F) =  px;
 			
 			if(	abs (pz) > 100 || 
-				abs (py) > 2 || 
-			   	abs(py) > 10){
+				abs (py) > 3 || 
+			   	abs(px) > 10){
 			
-				edge.at<uchar>(i, j, CV_8U) = 0;
+				edge.at<uchar>(i, j) = 0; //edge.at<uchar>(i, j, CV_8U) = 0;
+				dispar.at<char>(i, j) = 0;
 				
+			}
+			else{
+				//dispar.at<char>(i, j) = (char) (std::min(255.0 , pz*2+20)); 
 			}
 			
 		}
 		//cv::imshow("CannyEdge", edge);
 	}
 	
-	//MASK	
 	
-	
-	/*
-	for(int row=0; row<edge2.rows; ++row){
-		for (int col=0; col<edge2.cols; ++col){
-			
-			if(	abs (depthMap.at<float>(row, col)) > 100 || 
-				abs (heightMap.at<float>(row, col)) > 3 || 
-			   	abs(widthMap.at<float>(row, col) > 10)	){
-			
-				edge2.at<char>(row, col, CV_8U) = 0;
-				
-			}
-			
-		
-		}
-		cv::imshow("view", edge2);
-	
-	}
-	*/
-	
-	
-	//bilateralFilter(last_image_->image, edge2,-1, 50, 7);
-	
-	
-
-	//Canny( edge2, edge, 60, 120, 3);
-	
-	
+	GaussianBlur(dispar, dispar, cv::Size(3,3), -1, -1, 0);
+	Canny( dispar, edge2, 60, 120, 3);
+	cv::imshow("DisparityEdge", edge2);
 	
 
 	
 	for (int row = 0; row < edge.rows-1; ++row) {
 		edge.at<uchar>(row, 1) =  0;
+		edge.at<uchar>(row, 0) =  0;
 		edge.at<uchar>(row, edge.cols-1) =  0;
 		edge.at<uchar>(row, edge.cols-2) =  0;
 
@@ -497,10 +480,18 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	for (int col = 0; col < edge.cols-1; ++col) {
 		edge.at<uchar>(1, col) =  0;
+		edge.at<uchar>(0, col) =  0;
+
 		edge.at<uchar>(edge.rows-1, col) =  0;
+		edge.at<uchar>(edge.rows-2, col) =  0;
 	}
 	
-	
+	for (int row = 0; row < (edge.rows-1)/4; ++row) {
+		for (int col = 0; col < edge.cols-1; ++col) {
+			edge.at<uchar>(row, col) =  0;
+		}
+
+	}
 
 	
 	cv::imshow("CannyEdge", edge);
@@ -526,9 +517,9 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					loops--;
 					while(true){
 
-						cv::imshow("image", edge);
+//cv::imshow("image", edge);
 
-						edge.at<uchar>(inI, inJ, CV_8U) =  133;
+						edge.at<uchar>(inI, inJ, CV_8U) =  254;
 
 						if(edge.at<uchar>(inI, inJ+1, CV_8U) ==  255){
 							inJ++;
@@ -581,34 +572,42 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 						prevR=inI;
 						prevC=inJ;
 
-
-
 					}
 				}
 				
 //std::cout<< len <<" " << std::endl;
 				loops=2;
-				while(loops>0){
-					loops--;
-					inI= row;
-					inJ= col;
-					len++;
-					if(len < 80 && len!=-1){
-
-					int memo=0;
-					cv::Mat mem;	
+				if(len < 70 && len!=-1){
+					
+					while(loops>0){
+						
+						inI= row;
+						inJ= col;
+						len++;
+						loops--;
+						int memo=0;
+						cv::Mat mem;	
+						
 						while(len>0){
 
-	cv::imshow("image", edge);
+//cv::imshow("image", edge);
 	//std::cout.flush();
 	//usleep(1);
 
 							len--;
-							rect_roi = cv::Rect(inJ-1, inI-1, 3, 3);
-							image_roi = edge(rect_roi);
-
 							int count = 0;
-
+							int cht = 0;
+								
+						
+							if(inJ!=0 && inI!=0 && inI!=dispar.rows-2  &&  inI!=dispar.rows-1   
+							   && inJ!=dispar.cols-2   && inJ!=dispar.cols-1){ 
+								
+								rect_roi = cv::Rect(inJ-1, inI-1, 3, 3);
+								edge.at<uchar>(inI, inJ) = 0;
+								}
+							else rect_roi = cv::Rect(0, 0, 3, 3);
+							
+							image_roi = edge(rect_roi);
 
 							if(image_roi.at<uchar>(0, 0) == 255) count++;
 							else if (count==0 && image_roi.at<uchar>(0, 1) == 255) count++;
@@ -618,60 +617,69 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 							else if (count==0 && image_roi.at<uchar>(2, 0) == 255) count++;
 							else if (count==0 && image_roi.at<uchar>(2, 1) == 255) count++;
 							else if (count==0 && image_roi.at<uchar>(2, 2) == 255) count++;
-
+								
+								
+							image_roi.at<uchar>(1, 1) = 0;	
+							
 
 							if(count>0 && memo==0){
-								image_roi.at<uchar>(1, 1) = 0;
 								memo=1;
 								mem=image_roi;
 							}
-							else{
-								image_roi.at<uchar>(1, 1) = 0;
-							}
+	
 
 
-							if(edge.at<uchar>(inI, inJ+1, CV_8U) ==  133){
+							if(edge.at<uchar>(inI, inJ+1, CV_8U) ==  254){
 								inJ++;
 							}
 
-							else if(edge.at<uchar>(inI-1, inJ+1, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI-1, inJ+1, CV_8U) ==  254){
 								inI--;
 								inJ++;
 							}
 
-							else if(edge.at<uchar>(inI-1, inJ, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI-1, inJ, CV_8U) ==  254){
 								inI--;
 							}
 
-							else if(edge.at<uchar>(inI-1, inJ-1, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI-1, inJ-1, CV_8U) ==  254){
 								inI--;
 								inJ--;
 							}
 
-							else if(edge.at<uchar>(inI, inJ-1, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI, inJ-1, CV_8U) ==  254){
 								inJ--;
 							}
 
-							else if(edge.at<uchar>(inI+1, inJ-1, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI+1, inJ-1, CV_8U) ==  254){
 								inI++;
 								inJ--;
 							}
 
-							else if(edge.at<uchar>(inI+1, inJ, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI+1, inJ, CV_8U) ==  254){
 								inI++;
 							}
 
-							else if(edge.at<uchar>(inI+1, inJ+1, CV_8U) ==  133){
+							else if(edge.at<uchar>(inI+1, inJ+1, CV_8U) ==  254){
 								inI++;
 								inJ++;
 							}
 
 							if(memo==1){
+								memo++;
+							}
+							else if(memo==2){
+								memo++;
+							}
+							else if(memo==3){
 								memo=0;
 								mem.at<uchar>(1, 1) = 255;
 							}
-
-							else if(edge.at<uchar>(inI, inJ, CV_8U) == 0 || edge.at<uchar>(inI, inJ, CV_8U) == 133 ){
+							
+							if(edge.at<uchar>(inI, inJ)==0){
+								if (memo>0){
+									mem.at<uchar>(1, 1) = 255;
+								}
 								break;
 							}
 
@@ -679,22 +687,371 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 
 					}
 
-
-					else{
-
-					}
-
 				}
+				
+				else if(len!=-1){
+					
+					//ELSE
+				
+					int count_dispar = 0;
+					int avg_dispar = 0;
+					
+					int dispar_counter[256];
+					
+					for(int i=0; i<256; i++){
+						dispar_counter[i] = 0;
+					}
+					
+					int save_len=len;
+					
+					loops=2;
+					
+					
+					//WHILE
+					while(loops>0){
+						
+						inI= row;
+						inJ= col;
+						len++;
+						loops--;
+	
+						
+						while(len>0 ){
+							
+							dispar_counter[dispar.at<uchar>(inI, inJ)]++;
+							
+							if(dispar.at<uchar>(inI, inJ) != 0){
+								count_dispar++;
+								avg_dispar+=dispar.at<uchar>(inI, inJ);
+							}
+
+							len--;
+							
+							edge.at<uchar>(inI, inJ) = 253;
+	
+							if(edge.at<uchar>(inI, inJ+1, CV_8U) ==  254){
+								inJ++;
+							}
+
+							else if(edge.at<uchar>(inI-1, inJ+1, CV_8U) ==  254){
+								inI--;
+								inJ++;
+							}
+
+							else if(edge.at<uchar>(inI-1, inJ, CV_8U) ==  254){
+								inI--;
+							}
+
+							else if(edge.at<uchar>(inI-1, inJ-1, CV_8U) ==  254){
+								inI--;
+								inJ--;
+							}
+
+							else if(edge.at<uchar>(inI, inJ-1, CV_8U) ==  254){
+								inJ--;
+							}
+
+							else if(edge.at<uchar>(inI+1, inJ-1, CV_8U) ==  254){
+								inI++;
+								inJ--;
+							}
+
+							else if(edge.at<uchar>(inI+1, inJ, CV_8U) ==  254){
+								inI++;
+							}
+
+							else if(edge.at<uchar>(inI+1, inJ+1, CV_8U) ==  254){
+								inI++;
+								inJ++;
+							}
+
+							
+							if(edge.at<uchar>(inI, inJ)==253){
+								break;
+							}
+
+						}
+
+					} //WHILE CLOSED
+					
+					
+					loops=2;
+					len=save_len;
+					
+//std::cout << "avg_dispar: "<< avg_dispar << "    count_dispar: "<<  count_dispar;
+					
+					if(count_dispar==0){ 
+//std::cout<<endl;
+						break;
+					}
+					
+					
+					int max;
+					int index;
+					max=0;
+					for(int i=1; i<256; i++){
+						if(dispar_counter[i] > max){
+							max = (int) dispar_counter[i];
+							index = i;
+						}
+					
+					}
+					
+					avg_dispar = avg_dispar/count_dispar;
+					if(avg_dispar % 2 !=0) avg_dispar++;
+					
+					if(index % 2 != 0) index++;
+					
+					avg_dispar = std::min(254, index);
+					
+//std::cout<< "   avg_dispar_dived: "<< avg_dispar << std::endl;
+					
+					//WHILE
+					while(loops>0){
+						
+						inI= row;
+						inJ= col;
+						len++;
+						loops--;
+	
+						
+						while(len>0 ){
+							
+							len--;
+							
+							edge.at<uchar>(inI, inJ) = avg_dispar ;
+	
+							if(edge.at<uchar>(inI, inJ+1, CV_8U) ==  253){
+								inJ++;
+							}
+
+							else if(edge.at<uchar>(inI-1, inJ+1, CV_8U) ==  253){
+								inI--;
+								inJ++;
+							}
+
+							else if(edge.at<uchar>(inI-1, inJ, CV_8U) ==  253){
+								inI--;
+							}
+
+							else if(edge.at<uchar>(inI-1, inJ-1, CV_8U) ==  253){
+								inI--;
+								inJ--;
+							}
+
+							else if(edge.at<uchar>(inI, inJ-1, CV_8U) ==  253){
+								inJ--;
+							}
+
+							else if(edge.at<uchar>(inI+1, inJ-1, CV_8U) ==  253){
+								inI++;
+								inJ--;
+							}
+
+							else if(edge.at<uchar>(inI+1, inJ, CV_8U) ==  253){
+								inI++;
+							}
+
+							else if(edge.at<uchar>(inI+1, inJ+1, CV_8U) ==  253){
+								inI++;
+								inJ++;
+							}
+
+							
+							if(edge.at<uchar>(inI, inJ)==avg_dispar){
+								break;
+							}
+
+						}
+
+					} //WHILE CLOSED
+					
+					
+					
+					
+					
+					//ELSE CLOSE
+				
+				}
+				
 			
 			}
 			
 		}
 	}
 	
+	cv::Mat save_edge = edge.clone();
+	
+	for(int row=0; row<edge.rows; ++row){
+	
+		for(int col=0; col<edge.cols; ++ col){
+			
+			if(edge.at<uchar>(row, col) != 0){
+				
+				int len=0;
+				int loops=2;
+				
+				int leftI, leftJ;
+				int rightI, rightJ;
+				
+				int line_dispar = edge.at<uchar>(row, col);
+				
+				leftI = rightI = row;
+				leftJ = rightJ = col;
+				
+				while(loops>0){
+					
+					inI =  row;
+					inJ =  col;
+					
+					loops--;
+					while(true){
+
+						if(inJ < leftJ){
+							leftJ = inJ;
+							leftI = inI;
+						}
+						
+						if(inJ > rightJ){
+							rightJ = inJ;
+							rightI = inI;
+						}
+
+						edge.at<uchar>(inI, inJ, CV_8U) =  0;
+
+						if(edge.at<uchar>(inI, inJ+1, CV_8U) !=  0){
+							inJ++;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI-1, inJ+1, CV_8U) !=  0){
+							inI--;
+							inJ++;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI-1, inJ, CV_8U) !=  0){
+							inI--;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI-1, inJ-1, CV_8U) !=  0){
+							inI--;
+							inJ--;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI, inJ-1, CV_8U) !=  0){
+							inJ--;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI+1, inJ-1, CV_8U) !=  0){
+							inI++;
+							inJ--;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI+1, inJ, CV_8U) !=  0){
+							inI++;
+							len++;
+						}
+
+						else if(edge.at<uchar>(inI+1, inJ+1, CV_8U) !=  0){
+							inI++;
+							inJ++;
+							len++;
+						}
+
+						else{
+							break;
+						}
+//cv::imshow("view", edge);	
+					}
+				}
+				
+//cv::imshow("view", edge);				
+
+				int Lpass=0;
+				int Rpass=0;
+				
+				for(int i=1; i<50; i++){
+
+					
+					if(leftI+i < edge.rows && save_edge.at<uchar>(leftI+i, leftJ)!=0 && Lpass==0){
+						if(abs (save_edge.at<uchar>(leftI+i, leftJ) - save_edge.at<uchar>(leftI, leftJ) ) < 2)  {
+							//Rpass++;
+							for(int j=0; j<i+1; j++){
+
+								save_edge.at<uchar>(leftI+j, leftJ) = save_edge.at<uchar>(leftI, leftJ);
+							}
+						
+						}
+					}
+					
+					
+					if(rightI+i < edge.rows && save_edge.at<uchar>(rightI+i, rightJ)!=0){
+						if(abs (save_edge.at<uchar>(rightI+i, rightJ) - save_edge.at<uchar>(rightI, rightJ) ) < 2)  {
+							//Lpass++;
+							for(int j=0; j<i+1; j++){
+
+								save_edge.at<uchar>(rightI+j, rightJ) = save_edge.at<uchar>(rightI, rightJ);
+							}
+						
+						}
+					}
+				
+					if(Lpass>0 && Rpass>0) break;
+				}
+				
+				
+				
+			}
+			
+		}
+		
+	}
+	
+	
+	vector< vector <Point> > contours; // Vector for storing contour
+    vector< Vec4i > hierarchy;
+    findContours( save_edge, contours, hierarchy,CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+	//Mat drawing = Mat::zeros( edge.size(), CV_8UC3 );
+	Mat drawing;
+	//drawing = last_image_->image.clone();
+	cv::cvtColor(last_image_->image, drawing, CV_GRAY2RGB);
+	
+    for( int i = 0; i< contours.size(); i=hierarchy[i][0] ) // iterate through each contour.
+    {
+        Rect r= boundingRect(contours[i]);
+		
+		if( (r.width > 2*r.height) && r.width>100 ){
+			continue;
+		}
+		
+		if( (r.height > 2*r.width) && r.height>100 ){
+			continue;
+		}
+		
+		if(r.width*r.height<4000){
+			continue;
+		}
+		
+		if(r.width*r.height>40000){
+			continue;
+		}
+		
+        if(hierarchy[i][2]<0) //Check if there is a child contour
+          rectangle(drawing,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,0,255),2,8,0); //Opened contour
+        else
+          rectangle(drawing,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,255,0),2,8,0); //closed contour
+    }
+	
 	
 	std::cout<<"END TEST"<<std::endl;
 	
-	cv::imshow("image", edge);
+	cv::imshow("image", save_edge);
+	cv::imshow("imageR", drawing);
 	cv::imshow("disparity color", dispar);
 	
 	
@@ -1021,7 +1378,7 @@ static unsigned char colormap[768] =
 116, 255, 0,
 122, 255, 0,
 128, 255, 0,
-133, 255, 0,
+254, 255, 0,
 139, 255, 0,
 145, 255, 0,
 151, 255, 0,
