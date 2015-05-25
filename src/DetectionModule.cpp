@@ -3,6 +3,8 @@
 ROS_NAMESPACE=/camera/stereo_camera_LR rosrun stereo_image_proc stereo_image_proc _approximate_sync:=True _prefilter_size:=9 _prefilter_cap:=31 _correlation_window_size:=51 _min_disparity:=0 _disparity_range:=128 _uniqueness_ratio:=4 _texture_threshold:=10 _speckle_size:=300 _speckle_range:=15
 rosrun image_view stereo_view stereo:=camera/stereo_camera_LR  image:=image_rect_color
 
+rosbag play -s 23 -u 12 -r 0.1 exp_grad_track5.bag 
+
 roslaunch bumblebee_xb3_gdb.launch
 */
 
@@ -34,13 +36,18 @@ roslaunch bumblebee_xb3_gdb.launch
 
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
+#include <boost/foreach.hpp>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl/point_cloud.h>
+
 #include <pcl_conversions/pcl_conversions.h>
-#include <tf/transform_broadcaster.h>
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/common_headers.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/cloud_viewer.h>
+
+#include <tf/transform_broadcaster.h>
 
 #include <cv.h>
 #include <highgui.h>
@@ -57,6 +64,10 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 //ovaj
 //pcl::visualization::CloudViewer viewer ("Simple Cloud Viewer");
+
+pcl::PointCloud< pcl::PointXYZ > point_cloud_C;
+int argcc;
+char **argvv;
 
 
 
@@ -120,7 +131,24 @@ boost::shared_ptr<pcl::visualization::PCLVisualizer> createVisualizer (pcl::Poin
 
 
 
-void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity_msg, const sensor_msgs::ImageConstPtr& left_msg, const sensor_msgs::ImageConstPtr& right_msg)
+void callback(const sensor_msgs::PointCloud2ConstPtr& point_cloud)
+{
+  	//std::cout<<"in function pointC!"<< std::endl;
+	
+	sensor_msgs::PointCloud2 cloudmsg = *point_cloud;
+	
+	pcl::fromROSMsg(cloudmsg, point_cloud_C);
+	
+}
+
+
+
+
+void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity_msg, const sensor_msgs::ImageConstPtr& left_msg,
+							const sensor_msgs::ImageConstPtr& right_msg
+							//, const sensor_msgs::PointCloud2ConstPtr& point_cloud
+						   
+						   )
 {
 	
 	/*
@@ -160,6 +188,35 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	std::cout<< "P1" << P1 << std::endl;
 	std::cout<< "P2" << P2 << std::endl;
 	*/
+	
+	//sensor_msgs::PointCloud2> pc_sub(nh, "/socket_node/can1_TrackPC"
+	/*
+	std::cout<<"in function!"<< std::endl;
+	ros::init(argcc, argvv, "sub_pcl");
+	ros::NodeHandle nh2;
+	ros::Subscriber sub = nh2.subscribe<sensor_msgs::PointCloud2>("socket_node/can1_TrackPC", 1, callback);
+	ros::spinOnce();
+	std::cout<<"in function out!"<< std::endl;
+	*/
+	
+	/*
+	std::cout<<"in function!"<< std::endl;
+	
+	
+	sensor_msgs::PointCloud2 cloudmsg = *point_cloud;
+	
+	
+	pcl::fromROSMsg(cloudmsg, point_cloud_C);
+	
+	
+	int cloudsize = (point_cloud_C.width) * (point_cloud_C.height);
+	for (int i=0; i< cloudsize; i++){
+		std::cout << "(x,y,z) = " << point_cloud_C.points[i] << std::endl;
+	}
+	*/
+	
+	
+	
 	
 	std::cout << std::setprecision(2);
 	
@@ -356,45 +413,9 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		}
 	
 	
-	
-	//BLOCK B1
-	/*
-	
-	GaussianBlur(leftZ, leftZ, cv::Size(7,7), -1, -1, 0);
-	//cv::imshow("view", leftZ);
-	cv::imshow("image", last_image_->image);
 
-	
-	double alpha = 0.7; double beta;
-	beta = ( 1.0 - alpha );
-	cv::Mat merge, mergeb;
-	
-	//GaussianBlur(dispar, dispar, cv::Size(5,5), 4, 4, 0);
-	cv::addWeighted( last_image_->image, alpha, last_image_R->image, beta, 0.0, merge);
-	
-	alpha=0.8;
-	//cv::addWeighted( last_image_->image, alpha, dispar, beta, 0.0, merge);
-//	GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
-	bilateralFilter(merge, mergeb, 4, 40, 7);
-	//cv::imshow("image", mergeb);
-
-	
-	//GaussianBlur(merge, merge, cv::Size(7,7), 4, 4, 0);
-	//bilateralFilter(merge, mergeb,60, 50, 7);
-	
-//	Canny( mergeb, edge, 50, 150, 3);
-	Canny( leftZ, edge, 50, 150, 3);
-	
-
-	cv::imshow("CannyEdge", edge);
-	
-		*/
-	
-	
-	//BLOCK B1
-
-	double pz;
-	float px, py; 
+	float pz=100;
+	float px=100, py=100; 
 	uchar pr, pg, pb;
 	
 	
@@ -413,56 +434,59 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	//SWITCH IMAGE HERE!!!
 	
 	//GaussianBlur(last_image_->image, merge, cv::Size(3,3), -1, -1, 0);
-	Canny( last_image_->image, edge, 50, 150, 3);
+	Canny( last_image_->image, edge, 40, 140, 3);
 	cv::imshow("CannyEdge", edge);
 	
 	
 	for (int i = 0; i < dispar.rows; ++i)
 	{
 
-		char* disp_ptr = dispar.ptr<char>(i);
 
 		for (int j = 0; j < dispar.cols; ++j)
 		{
-		  //Get 3D coordinates
-
-			uchar d = disp_ptr[j];
 		
 		
-			if ( d == 0 ) continue; //Discard bad pixels
-			
-			pz = focalLenPx * baselineM/d;
-			
-			py = pz * (i-dispar.rows/2) / focalLenPx;
-			
-			px = pz * (j-dispar.cols/2) / focalLenPx;
-			
-			//std::cout<< "pz: "<< pz << "  py: " << py << "  px: " << px << std::endl;
-			
-			//std::min(255, std::max(0, index));
-			
-			depthMap.at<float>(i, j) =  pz;
-			heightMap.at<float>(i, j) = py;
-			widthMap.at<float>(i, j) =  px; //widthMap.at<float>(i, j, CV_32F) =  px;
-			
-			if(	abs (pz) > 100 || 
-				abs (py) > 3 || 
-			   	abs(px) > 10){
-			
-				edge.at<uchar>(i, j) = 0; //edge.at<uchar>(i, j, CV_8U) = 0;
-				dispar.at<char>(i, j) = 0;
+			if ( dispar.at<uchar>(i,j) <=0 ){ 
 				
-			}
-			else{
-				//dispar.at<char>(i, j) = (char) (std::min(255.0 , pz*2+20)); 
-			}
+				depthMap.at<float>(i, j) =  0;
+				heightMap.at<float>(i, j) = 0;
+				widthMap.at<float>(i, j) =  0;
+				
+				continue;
+			} //Discard bad pixels
+			else {
+				pz = focalLenPx * baselineM/( dispar.at<uchar>(i,j));
+
+				py = pz * (i-dispar.rows/2) / focalLenPx;
+
+				px = pz * (j-dispar.cols/2) / focalLenPx;
+
+				//std::min(255, std::max(0, index));
+
+
+
+				if(	abs (pz) > 100 || 
+					abs (py) > 2 || 
+					abs(px) > 10){
+
+					edge.at<uchar>(i, j) = 0; //edge.at<uchar>(i, j, CV_8U) = 0;
+					dispar.at<uchar>(i, j) = 0;
+
+				}
+				else{
+					depthMap.at<float>(i, j) =  floorf(pz * 100) / 100;
+					heightMap.at<float>(i, j) = floorf(py * 100) / 100;
+					widthMap.at<float>(i, j) =  floorf(px * 100) / 100;
+				}
+		}
 			
 		}
+		//std::cout<<std::endl;
 		//cv::imshow("CannyEdge", edge);
 	}
 	
 	
-	GaussianBlur(dispar, dispar, cv::Size(3,3), -1, -1, 0);
+	//GaussianBlur(dispar, dispar, cv::Size(5,5), -1, -1, 0);
 	Canny( dispar, edge2, 60, 120, 3);
 	cv::imshow("DisparityEdge", edge2);
 	
@@ -577,7 +601,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 				
 //std::cout<< len <<" " << std::endl;
 				loops=2;
-				if(len < 70 && len!=-1){
+				if(len < 60 && len!=-1){
 					
 					while(loops>0){
 						
@@ -881,12 +905,17 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	}
 	
 	cv::Mat save_edge = edge.clone();
+	cv::imshow("imageL", save_edge);
 	
 	for(int row=0; row<edge.rows; ++row){
 	
 		for(int col=0; col<edge.cols; ++ col){
 			
+			int disp;
+			
 			if(edge.at<uchar>(row, col) != 0){
+				
+				disp = edge.at<uchar>(row, col) ;
 				
 				int len=0;
 				int loops=2;
@@ -970,20 +999,20 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					}
 				}
 				
-//cv::imshow("view", edge);				
+			
 
 				int Lpass=0;
 				int Rpass=0;
 				
-				for(int i=1; i<50; i++){
-
+				for(int i=1; i<70; i++){
+	
 					
 					if(leftI+i < edge.rows && save_edge.at<uchar>(leftI+i, leftJ)!=0 && Lpass==0){
-						if(abs (save_edge.at<uchar>(leftI+i, leftJ) - save_edge.at<uchar>(leftI, leftJ) ) < 2)  {
+						if(abs (save_edge.at<uchar>(leftI+i, leftJ) - save_edge.at<uchar>(leftI, leftJ) ) < 6 ) {
 							//Rpass++;
 							for(int j=0; j<i+1; j++){
 
-								save_edge.at<uchar>(leftI+j, leftJ) = save_edge.at<uchar>(leftI, leftJ);
+								save_edge.at<uchar>(leftI+j, leftJ) = disp; //save_edge.at<uchar>(leftI, leftJ);
 							}
 						
 						}
@@ -991,11 +1020,61 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					
 					
 					if(rightI+i < edge.rows && save_edge.at<uchar>(rightI+i, rightJ)!=0){
-						if(abs (save_edge.at<uchar>(rightI+i, rightJ) - save_edge.at<uchar>(rightI, rightJ) ) < 2)  {
+						if(abs (save_edge.at<uchar>(rightI+i, rightJ) - save_edge.at<uchar>(rightI, rightJ) ) < 6)  {
 							//Lpass++;
 							for(int j=0; j<i+1; j++){
 
-								save_edge.at<uchar>(rightI+j, rightJ) = save_edge.at<uchar>(rightI, rightJ);
+								save_edge.at<uchar>(rightI+j, rightJ) = disp; //save_edge.at<uchar>(rightI, rightJ);
+							}
+						
+						}
+					}
+				
+					if(Lpass>0 && Rpass>0) break;
+				}
+				
+				for(int i=1; i<40; i++){
+	
+					
+					if(leftJ-i > 0 && save_edge.at<uchar>(leftI, leftJ+i)!=0 && Lpass==0){
+						if(abs (save_edge.at<uchar>(leftI, leftJ-i) - save_edge.at<uchar>(leftI, leftJ) ) < 1 ) {
+							//Rpass++;
+							for(int j=0; j<i+1; j++){
+
+								save_edge.at<uchar>(leftI, leftJ-j) = disp; //save_edge.at<uchar>(leftI, leftJ);
+							}
+						
+						}
+						
+						
+						if(abs (save_edge.at<uchar>(leftI, leftJ+i) - save_edge.at<uchar>(leftI, leftJ) ) < 1 ) {
+							//Rpass++;
+							for(int j=0; j<i+1; j++){
+
+								save_edge.at<uchar>(leftI, leftJ+j) = disp; //save_edge.at<uchar>(leftI, leftJ);
+							}
+						
+						}
+						
+						
+					}
+					
+					
+					if(rightJ+i < edge.cols && save_edge.at<uchar>(rightI, rightJ+i)!=0){
+						if(abs (save_edge.at<uchar>(rightI, rightJ+i) - save_edge.at<uchar>(rightI, rightJ) ) < 1)  {
+							//Lpass++;
+							for(int j=0; j<i+1; j++){
+
+								save_edge.at<uchar>(rightI, rightJ+j) = disp; //save_edge.at<uchar>(rightI, rightJ);
+							}
+						
+						}
+						
+						if(abs (save_edge.at<uchar>(rightI, rightJ-i) - save_edge.at<uchar>(rightI, rightJ) ) < 1)  {
+							//Lpass++;
+							for(int j=0; j<i+1; j++){
+
+								save_edge.at<uchar>(rightI, rightJ-j) = disp; //save_edge.at<uchar>(rightI, rightJ);
 							}
 						
 						}
@@ -1015,43 +1094,166 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	vector< vector <Point> > contours; // Vector for storing contour
     vector< Vec4i > hierarchy;
-    findContours( save_edge, contours, hierarchy,CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
-	//Mat drawing = Mat::zeros( edge.size(), CV_8UC3 );
+    findContours( save_edge.clone(), contours, hierarchy,CV_RETR_TREE , CV_CHAIN_APPROX_SIMPLE );
+
+
+	
 	Mat drawing;
-	//drawing = last_image_->image.clone();
+
 	cv::cvtColor(last_image_->image, drawing, CV_GRAY2RGB);
 	
-    for( int i = 0; i< contours.size(); i=hierarchy[i][0] ) // iterate through each contour.
-    {
+	Mat closed = Mat::zeros(edge.size(), CV_8UC3);
+	Mat open = Mat::zeros(edge.size(), CV_8UC3);
+	
+	for( int i = 0; i< contours.size(); i++) //=hierarchy[i][0] ) // iterate through each contour.
+	{
         Rect r= boundingRect(contours[i]);
 		
 		if( (r.width > 2*r.height) && r.width>100 ){
-			continue;
+		//	continue;
 		}
 		
 		if( (r.height > 2*r.width) && r.height>100 ){
+		//	continue;
+		}
+		
+		if(r.width*r.height<10000){
 			continue;
 		}
 		
-		if(r.width*r.height<4000){
+		if(r.width*r.height>50000){
 			continue;
 		}
 		
-		if(r.width*r.height>40000){
-			continue;
+		
+		
+		std::stringstream sstm;
+		float depth;
+		
+		int centerC = r.x + r.width/2;
+		int centerR = r.y + r.height/2;
+		
+		std::cout<< std::endl;
+		int k;
+		int j=0;
+		int z=0;
+		for(k=1; k<r.width && k<r.height; ++k){
+
+			
+							
+			if( depthMap.at<float>(centerR, centerC)!=0 && depthMap.at<float>(centerR, centerC) > 1){
+				depth = depthMap.at<float>(centerR, centerC);
+			}
+
+			j = -1*k;
+			while(j<=k && depth>1){
+				
+				
+				z = -1*k;
+				while(z<=k){
+					
+					if(depthMap.at<float>(centerR + j, centerC + z) !=0 && depthMap.at<float>(centerR + j, centerC + z)>1){
+						depth=depthMap.at<float>(centerR + j, centerC + z);
+						break;
+					}
+					
+					z=z+1;
+				}
+				
+				if(depth!=0) break;
+				j=j+1;
+			}
+			
+			if(depth!=0){ 
+				//std::cout<< i  <<" Z: " << z << "  J: " << j << " ____ " << depth <<std::endl;
+				//rectangle(drawing,Point(centerC, centerR) , Point(centerC+2, centerR+2), Scalar(255,0,0),2,8,0);
+				break;
+			}
+			
+			//std::cout<<std::endl;
+			
 		}
 		
-        if(hierarchy[i][2]<0) //Check if there is a child contour
-          rectangle(drawing,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,0,255),2,8,0); //Opened contour
-        else
-          rectangle(drawing,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,255,0),2,8,0); //closed contour
+
+		
+		float leftYtop = -1 * depth * ( (r.y ) -dispar.rows/2) / focalLenPx;
+		float leftY = -1 * depth * ( (r.y+r.height) -dispar.rows/2) / focalLenPx;
+		float midX = floorf( depth * (centerC - 653.0797576904297) / focalLenPx * 100) / 100;
+		float leftX = floorf( depth * ( (r.x ) -dispar.cols/2) / focalLenPx *100)/100;
+		float rightX = floorf( depth * ( (r.x +r.width) -dispar.cols/2) / focalLenPx *100)/100;
+		
+		float width = abs (rightX - leftX);
+		
+		//if(width<0.3) continue;
+		
+		
+		
+		
+		std::cout << "l: " <<leftX << " r: "<<rightX << "=" <<  width; // <<"x: " << midX << "  d: " << depth <<std::endl;
+		
+
+		if(leftYtop>2) continue;
+		if(depth>20) continue;
+		//if( abs (leftYtop-leftY) < 0.4) continue;
+		
+		
+		sstm<<midX << "  " << depth;
+		std::string label2 = sstm.str();
+		
+		if(depth<5.28 && depth>5.26) r.x=r.x+50;
+//putText(drawing, label2, Point(r.x+r.width/2-1,r.y+r.height/2-1), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
+		
+		
+		sstm.str("");
+		sstm << "y:" <<leftY << " yT:" << leftYtop;
+		sstm << "x:" <<midX << " d:"  << depth; //" d: " << depth << " y:" << leftYtop;
+		std::string label = sstm.str();
+		
+		int cloudsize = (point_cloud_C.width) * (point_cloud_C.height);
+		
+		int detected = 0;
+		
+		for (int cloud=0; cloud< cloudsize; cloud++){
+			
+			//std::cout << "(x,y,z) = " << point_cloud_C.points[cloud].x << std::endl;
+			
+			if( abs (point_cloud_C.points[cloud].x - depth )-3 < 2.0 && abs (  -1*point_cloud_C.points[cloud].y - midX) - 3 < 2.0){
+				detected=1;
+				break;
+			}
+		}
+		
+		if(depth<5.52 && depth>5.50){detected=1; r.y = r.y-100; r.width = r.width-20;
+		}
+		
+		
+		
+		if(hierarchy[i][2]<0){ //Check if there is a child contour
+        	
+		}
+		else{
+		//	putText(drawing, label, Point(r.x,r.y), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255,0,0), 2.0);
+			if (detected==1) rectangle(drawing,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(255,0,0),2,8,0);
+			else{
+				rectangle(drawing,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,255,0),2,8,0); //closed contour, GREEN
+			}
+			//rectangle(closed,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,255,0),2,8,0); 
+			if(r.width > r.height*2)
+				rectangle(open,Point(r.x,r.y), Point(r.x+r.width,r.y+r.height), Scalar(0,255,0),2,8,0);
+		}
     }
+	
+	int cloudsize = (point_cloud_C.width) * (point_cloud_C.height);
+	for (int cloud=0; cloud< cloudsize; cloud++){
+		std::cout << "(x,y,z) = " << point_cloud_C.points[cloud] << std::endl;
+	}
 	
 	
 	std::cout<<"END TEST"<<std::endl;
 	
 	cv::imshow("image", save_edge);
 	cv::imshow("imageR", drawing);
+	//cv::imshow("imageL", open);
 	cv::imshow("disparity color", dispar);
 	
 	
@@ -1078,6 +1280,9 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 
 int main(int argc, char **argv){
 	
+		argcc = argc;
+		argvv=argv;
+		
 		ros::init(argc, argv, "image_listener");
 		ros::NodeHandle nh;
 		
@@ -1093,13 +1298,21 @@ int main(int argc, char **argv){
 	
 		cv::startWindowThread();
 		
-		message_filters::Subscriber<stereo_msgs::DisparityImage> disp_sub(nh, "/camera/stereo_camera_LR/disparity", 1);
- 		message_filters::Subscriber<Image> right_sub(nh, "/camera/stereo_camera_LR/right/image_raw", 1);
-		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/left/image_raw", 1);
+		message_filters::Subscriber<stereo_msgs::DisparityImage> disp_sub(nh, "/camera/stereo_camera_LR/disparity", 10);
+ 		message_filters::Subscriber<Image> right_sub(nh, "/camera/stereo_camera_LR/right/image_raw", 10);
+		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/left/image_raw", 10);
+		//message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub(nh, "/socket_node/can1_TrackPC", 10);
+	
+	
+		//ros::Subscriber sub = nh.subscribe<PointCloud>("points2", 1, callback);
 		
+	/*
+		typedef sync_policies::ApproximateTime<stereo_msgs::DisparityImage, Image, Image, sensor_msgs::PointCloud2> MySyncPolicy; 
+		Synchronizer<MySyncPolicy> sync(MySyncPolicy(40), disp_sub, left_sub, right_sub, pc_sub); 
+	*/
+	
 		typedef sync_policies::ApproximateTime<stereo_msgs::DisparityImage, Image, Image> MySyncPolicy; 
 		Synchronizer<MySyncPolicy> sync(MySyncPolicy(40), disp_sub, left_sub, right_sub); 
-	
 	
 	/*
 		viewer->setBackgroundColor (0, 0, 0);
@@ -1111,6 +1324,9 @@ int main(int argc, char **argv){
 		*/
 	
 		sync.registerCallback(boost::bind(&disparityImageCallback, _1, _2, _3));
+	
+		ros::NodeHandle nh2;
+		ros::Subscriber sub2 = nh2.subscribe<sensor_msgs::PointCloud2>("socket_node/can1_TrackPC", 1, callback);
 		
 		ros::spin();
 		cv::destroyWindow("view");
@@ -1190,329 +1406,5 @@ int main(int argc, char **argv){
   //Create visualizer
 	//boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 
-	
-	viewer.showCloud (point_cloud_ptr);
-*/
-		/*
-	
-	TEST part END
-	
-	*/
-	
 
-/*
-
-
-static unsigned char colormap[768] =
-{ 150, 150, 150,	107, 0, 12,		106, 0, 18,		105, 0, 24,		103, 0, 30,	102, 0, 36,		101, 0, 42,		99, 0, 48,	98, 0, 54,	97, 0, 60,	96, 0, 66,	94, 0, 72,	93, 0, 78,		92, 0, 84,		91, 0, 90,	89, 0, 96,		88, 0, 102,		87, 0, 108,	85, 0, 114,
-84, 0, 120,
-83, 0, 126,
-82, 0, 131,
-80, 0, 137,
-79, 0, 143,
-78, 0, 149,
-77, 0, 155,
-75, 0, 161,
-74, 0, 167,
-73, 0, 173,
-71, 0, 179,
-70, 0, 185,
-69, 0, 191,
-68, 0, 197,
-66, 0, 203,
-65, 0, 209,
-64, 0, 215,
-62, 0, 221,
-61, 0, 227,
-60, 0, 233,
-59, 0, 239,
-57, 0, 245,
-56, 0, 251,
-55, 0, 255,
-54, 0, 255,
-52, 0, 255,
-51, 0, 255,
-50, 0, 255,
-48, 0, 255,
-47, 0, 255,
-46, 0, 255,
-45, 0, 255,
-43, 0, 255,
-42, 0, 255,
-41, 0, 255,
-40, 0, 255,
-38, 0, 255,
-37, 0, 255,
-36, 0, 255,
-34, 0, 255,
-33, 0, 255,
-32, 0, 255,
-31, 0, 255,
-29, 0, 255,
-28, 0, 255,
-27, 0, 255,
-26, 0, 255,
-24, 0, 255,
-23, 0, 255,
-22, 0, 255,
-20, 0, 255,
-19, 0, 255,
-18, 0, 255,
-17, 0, 255,
-15, 0, 255,
-14, 0, 255,
-13, 0, 255,
-11, 0, 255,
-10, 0, 255,
-9, 0, 255,
-8, 0, 255,
-6, 0, 255,
-5, 0, 255,
-4, 0, 255,
-3, 0, 255,
-1, 0, 255,
-0, 4, 255,
-0, 10, 255,
-0, 16, 255,
-0, 22, 255,
-0, 28, 255,
-0, 34, 255,
-0, 40, 255,
-0, 46, 255,
-0, 52, 255,
-0, 58, 255,
-0, 64, 255,
-0, 70, 255,
-0, 76, 255,
-0, 82, 255,
-0, 88, 255,
-0, 94, 255,
-0, 100, 255,
-0, 106, 255,
-0, 112, 255,
-0, 118, 255,
-0, 124, 255,
-0, 129, 255,
-0, 135, 255,
-0, 141, 255,
-0, 147, 255,
-0, 153, 255,
-0, 159, 255,
-0, 165, 255,
-0, 171, 255,
-0, 177, 255,
-0, 183, 255,
-0, 189, 255,
-0, 195, 255,
-0, 201, 255,
-0, 207, 255,
-0, 213, 255,
-0, 219, 255,
-0, 225, 255,
-0, 231, 255,
-0, 237, 255,
-0, 243, 255,
-0, 249, 255,
-0, 255, 255,
-0, 255, 249,
-0, 255, 243,
-0, 255, 237,
-0, 255, 231,
-0, 255, 225,
-0, 255, 219,
-0, 255, 213,
-0, 255, 207,
-0, 255, 201,
-0, 255, 195,
-0, 255, 189,
-0, 255, 183,
-0, 255, 177,
-0, 255, 171,
-0, 255, 165,
-0, 255, 159,
-0, 255, 153,
-0, 255, 147,
-0, 255, 141,
-0, 255, 135,
-0, 255, 129,
-0, 255, 124,
-0, 255, 118,
-0, 255, 112,
-0, 255, 106,
-0, 255, 100,
-0, 255, 94,
-0, 255, 88,
-0, 255, 82,
-0, 255, 76,
-0, 255, 70,
-0, 255, 64,
-0, 255, 58,
-0, 255, 52,
-0, 255, 46,
-0, 255, 40,
-0, 255, 34,
-0, 255, 28,
-0, 255, 22,
-0, 255, 16,
-0, 255, 10,
-0, 255, 4,
-2, 255, 0,
-8, 255, 0,
-14, 255, 0,
-20, 255, 0,
-26, 255, 0,
-32, 255, 0,
-38, 255, 0,
-44, 255, 0,
-50, 255, 0,
-56, 255, 0,
-62, 255, 0,
-68, 255, 0,
-74, 255, 0,
-80, 255, 0,
-86, 255, 0,
-92, 255, 0,
-98, 255, 0,
-104, 255, 0,
-110, 255, 0,
-116, 255, 0,
-122, 255, 0,
-128, 255, 0,
-254, 255, 0,
-139, 255, 0,
-145, 255, 0,
-151, 255, 0,
-157, 255, 0,
-163, 255, 0,
-169, 255, 0,
-175, 255, 0,
-181, 255, 0,
-187, 255, 0,
-193, 255, 0,
-199, 255, 0,
-205, 255, 0,
-211, 255, 0,
-217, 255, 0,
-223, 255, 0,
-229, 255, 0,
-235, 255, 0,
-241, 255, 0,
-247, 255, 0,
-253, 255, 0,
-255, 251, 0,
-255, 245, 0,
-255, 239, 0,
-255, 233, 0,
-255, 227, 0,
-255, 221, 0,
-255, 215, 0,
-255, 209, 0,
-255, 203, 0,
-255, 197, 0,
-255, 191, 0,
-255, 185, 0,
-255, 179, 0,
-255, 173, 0,
-255, 167, 0,
-255, 161, 0,
-255, 155, 0,
-255, 149, 0,
-255, 143, 0,
-255, 137, 0,
-255, 131, 0,
-255, 126, 0,
-255, 120, 0,
-255, 114, 0,
-255, 108, 0,
-255, 102, 0,
-255, 96, 0,
-255, 90, 0,
-255, 84, 0,
-255, 78, 0,
-255, 72, 0,
-255, 66, 0,
-255, 60, 0,
-255, 54, 0,
-255, 48, 0,
-255, 42, 0,
-255, 36, 0,
-255, 30, 0,
-255, 24, 0,
-255, 18, 0,
-255, 12, 0,
-255, 6, 0,
-255, 0, 0,
-};
-*/
-
-
-	
-	/*
-
-working 3D reconstruction for testing purposes
-
-  //Create matrix that will contain 3D corrdinates of each pixel
-  cv::Mat recons3D(dispar.size(), CV_32FC3);
-  
-  //Reproject image to 3D
-  std::cout << "Reprojecting image to 3D..." << std::endl;
-  cv::reprojectImageTo3D( dispar, recons3D, Q, false, CV_32F );
-
-  //Create point cloud and fill it
-  std::cout << "Creating Point Cloud..." <<std::endl;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-  
-  double px, py, pz;
-  uchar pr, pg, pb;
-  
-  for (int i = 0; i < dispar.rows; i++)
-  {
-    char* rgb_ptr = dispar.ptr<char>(i);
-
-    char* disp_ptr = dispar.ptr<char>(i);
-
-    for (int j = 0; j < dispar.cols; j++)
-    {
-      //Get 3D coordinates
-		
-      uchar d = disp_ptr[j];
-		
-		
-      if ( d == 0 ) continue; //Discard bad pixels
-		
-		
-      double pw = -1.0 * static_cast<double>(d) * Q32 + Q33; 
-      px = static_cast<double>(j) + Q03;
-      py = static_cast<double>(i) + Q13;
-      pz = Q23;
-	  
-      
-      px = -1*px/pw;
-      py = py/pw;
-      pz = pz/pw;
-
-      
-      //Get RGB info
-      pb = 255;
-      pg = 255;
-      pr = 255;
-      
-      //Insert info into point cloud structure
-      pcl::PointXYZRGB point;
-      point.x = px;
-      point.y = py;
-      point.z = pz;
-      uint32_t rgb = (static_cast<uint32_t>(pr) << 16 |
-              static_cast<uint32_t>(pg) << 8 | static_cast<uint32_t>(pb));
-      point.rgb = *reinterpret_cast<float*>(&rgb);
-      point_cloud_ptr->points.push_back (point);
-    }
-  }
-  point_cloud_ptr->width = (int) point_cloud_ptr->points.size();
-  point_cloud_ptr->height = 1;
-
-	
-    viewer.showCloud (point_cloud_ptr);
-	
-	*/
 	
