@@ -17,7 +17,6 @@ roslaunch bumblebee_xb3_gdb.launch
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-//#include < opencv2/video/background_segm.hpp> 
 
 #include <string>
 
@@ -133,7 +132,6 @@ boost::shared_ptr<pcl::visualization::PCLVisualizer> createVisualizer (pcl::Poin
 
 void callback(const sensor_msgs::PointCloud2ConstPtr& point_cloud)
 {
-  	//std::cout<<"in function pointC!"<< std::endl;
 	
 	sensor_msgs::PointCloud2 cloudmsg = *point_cloud;
 	
@@ -253,13 +251,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	last_image_ = cv_bridge::toCvCopy(left_msg, sensor_msgs::image_encodings::MONO8);
 	last_image_R = cv_bridge::toCvCopy(right_msg, sensor_msgs::image_encodings::MONO8);
 	
-	
-	//cv::Mat right = shiftFrame(last_image_R->image, 0, ShiftRight);
-	//cv::Mat left = shiftFrame(last_image_->image, 0, ShiftLeft);
-		
-	
-	//cv::imshow("imageR", right);
-	//cv::imshow("imageL", left);
+
 	
 	
 	cv::Mat edge, edge2;
@@ -267,128 +259,11 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	const clock_t begin_time = clock();
 	std::cout << "Timestart! " <<float( clock ())/  CLOCKS_PER_SEC<< "  ---";
 	
-	
-	//bilateralFilter(last_image_->image, edge2,-1, 50, 7);
-	
-	
-	//Canny( last_image_->image, edge, 60, 120, 3);
-	//Canny( edge2, edge, 60, 120, 3);
-
-	
-	/*
-	edge.convertTo(draw, CV_8U);
-	cv::imshow("CannyEdge", draw);
-	
-	std::cout << float( clock () - begin_time ) / (double) CLOCKS_PER_SEC<<"    ";
-	
-	
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-	
-	findContours( edge, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) ); //CV_RETR_EXTERNAL  CV_RETR_TREE
-	
-	
-	
-	//Remove small conturs
-	
-	/*
-	to slow, have to work way around this
-	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
-	{
-   		if (it->size()<CONTUR_LENGTH_THRESHOLD)
-        	it=contours.erase(it);
-    	else
-        	++it;
-	}*/
-	
-	
-	/* also to slow
-	vector<Moments> ContArea(contours.size());
-	for( int i = 0; i < contours.size(); i++ )
-    {  
-        ContArea[i] = moments(contours[i], false);
-    }
-	
-	int iterMoment=0;
-	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
-	{
-   		if (ContArea[iterMoment].m00 < 100)
-        	it=contours.erase(it);
-    	else
-        	++it;
-		
-		iterMoment++;
-	}
-	*/
-	
-	
-	
-	/*
-	  /// Approximate contours to polygons + get bounding rects and circles
-	  /// finding conturs takes too much time, not god for rest of processing
-	  
-  vector<vector<Point> > contours_poly( contours.size() );
-  vector<Rect> boundRect( contours.size() );
-  vector<Point2f>center( contours.size() );
-  vector<float>radius( contours.size() );
-
-  for( int i = 0; i < contours.size(); i++ )
-     { 
-	  approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-	  
-      boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-	  if(boundRect[i].width * boundRect[i].height < 500 || 
-		boundRect[i].width*3<boundRect[i].height ||
-		boundRect[i].width>boundRect[i].height*3){
-			contours.erase(contours.begin()+i);
-			boundRect.erase(boundRect.begin()+i);
-		  i--;
-	  }
-	  
-       //minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
-     }
-	
-
-
-	/// Draw contours
-	Mat drawing = Mat::zeros( edge.size(), CV_8UC3 );
-	for( int i = 0; i< contours.size(); i++ )
-	{
-		Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-		drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
-
-	}
-
-	/// Show in a window
-
-	imshow( "Contours", drawing );
-	*/
-	
-	
-		/*
-	int iterMoment=0;
-	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
-	{
-   		if (boundRect[iterMoment].size() < 100)
-        	it=contours.erase(it);
-    	else
-        	++it;
-		
-		iterMoment++;
-	}
-	*/
-	
-	
-	
-	
 	//Disparity calculation and parametars
 	
 	float min_disparity = disparity_msg->min_disparity;
 	float max_disparity = disparity_msg->max_disparity;
 	float multiplier = 255.0f / (max_disparity - min_disparity);
-	
-	//cv::Mat_<cv::Vec3b> disparity_color_;
-	//disparity_color_.create(disparity_msg->image.height, disparity_msg->image.width);
 	
 	//constructs a matrix on top of user-allocated data. step is in bytes(!!!), regardless of the type 
 	const cv::Mat_<float> dmat(disparity_msg->image.height, disparity_msg->image.width, (float*)&disparity_msg->image.data[0], disparity_msg->image.step);
@@ -433,8 +308,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	//SWITCH IMAGE HERE!!!
 	
-	//GaussianBlur(last_image_->image, merge, cv::Size(3,3), -1, -1, 0);
-	Canny( last_image_->image, edge, 40, 140, 3);
+	GaussianBlur(last_image_->image, merge, cv::Size(3,3), -1, -1, 0);
+	Canny( merge, edge, 40, 140, 3);
 	cv::imshow("CannyEdge", edge);
 	
 	
@@ -461,15 +336,11 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 
 				px = pz * (j-dispar.cols/2) / focalLenPx;
 
-				//std::min(255, std::max(0, index));
-
-
-
 				if(	abs (pz) > 100 || 
 					abs (py) > 2 || 
 					abs(px) > 10){
 
-					edge.at<uchar>(i, j) = 0; //edge.at<uchar>(i, j, CV_8U) = 0;
+					edge.at<uchar>(i, j) = 0; 
 					dispar.at<uchar>(i, j) = 0;
 
 				}
@@ -481,12 +352,10 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		}
 			
 		}
-		//std::cout<<std::endl;
-		//cv::imshow("CannyEdge", edge);
+
 	}
 	
 	
-	//GaussianBlur(dispar, dispar, cv::Size(5,5), -1, -1, 0);
 	Canny( dispar, edge2, 60, 120, 3);
 	cv::imshow("DisparityEdge", edge2);
 	
@@ -802,10 +671,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					loops=2;
 					len=save_len;
 					
-//std::cout << "avg_dispar: "<< avg_dispar << "    count_dispar: "<<  count_dispar;
 					
 					if(count_dispar==0){ 
-//std::cout<<endl;
 						break;
 					}
 					
@@ -828,7 +695,6 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					
 					avg_dispar = std::min(254, index);
 					
-//std::cout<< "   avg_dispar_dived: "<< avg_dispar << std::endl;
 					
 					//WHILE
 					while(loops>0){
@@ -889,11 +755,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 						}
 
 					} //WHILE CLOSED
-					
-					
-					
-					
-					
+                    
 					//ELSE CLOSE
 				
 				}
@@ -995,7 +857,6 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 						else{
 							break;
 						}
-//cv::imshow("view", edge);	
 					}
 				}
 				
@@ -1009,10 +870,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					
 					if(leftI+i < edge.rows && save_edge.at<uchar>(leftI+i, leftJ)!=0 && Lpass==0){
 						if(abs (save_edge.at<uchar>(leftI+i, leftJ) - save_edge.at<uchar>(leftI, leftJ) ) < 6 ) {
-							//Rpass++;
 							for(int j=0; j<i+1; j++){
-
-								save_edge.at<uchar>(leftI+j, leftJ) = disp; //save_edge.at<uchar>(leftI, leftJ);
+								save_edge.at<uchar>(leftI+j, leftJ) = disp; 
 							}
 						
 						}
@@ -1021,10 +880,8 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					
 					if(rightI+i < edge.rows && save_edge.at<uchar>(rightI+i, rightJ)!=0){
 						if(abs (save_edge.at<uchar>(rightI+i, rightJ) - save_edge.at<uchar>(rightI, rightJ) ) < 6)  {
-							//Lpass++;
 							for(int j=0; j<i+1; j++){
-
-								save_edge.at<uchar>(rightI+j, rightJ) = disp; //save_edge.at<uchar>(rightI, rightJ);
+								save_edge.at<uchar>(rightI+j, rightJ) = disp; 
 							}
 						
 						}
@@ -1038,20 +895,16 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					
 					if(leftJ-i > 0 && save_edge.at<uchar>(leftI, leftJ+i)!=0 && Lpass==0){
 						if(abs (save_edge.at<uchar>(leftI, leftJ-i) - save_edge.at<uchar>(leftI, leftJ) ) < 1 ) {
-							//Rpass++;
 							for(int j=0; j<i+1; j++){
-
-								save_edge.at<uchar>(leftI, leftJ-j) = disp; //save_edge.at<uchar>(leftI, leftJ);
+								save_edge.at<uchar>(leftI, leftJ-j) = disp; 
 							}
 						
 						}
 						
 						
 						if(abs (save_edge.at<uchar>(leftI, leftJ+i) - save_edge.at<uchar>(leftI, leftJ) ) < 1 ) {
-							//Rpass++;
 							for(int j=0; j<i+1; j++){
-
-								save_edge.at<uchar>(leftI, leftJ+j) = disp; //save_edge.at<uchar>(leftI, leftJ);
+								save_edge.at<uchar>(leftI, leftJ+j) = disp; 
 							}
 						
 						}
@@ -1062,19 +915,15 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 					
 					if(rightJ+i < edge.cols && save_edge.at<uchar>(rightI, rightJ+i)!=0){
 						if(abs (save_edge.at<uchar>(rightI, rightJ+i) - save_edge.at<uchar>(rightI, rightJ) ) < 1)  {
-							//Lpass++;
 							for(int j=0; j<i+1; j++){
-
-								save_edge.at<uchar>(rightI, rightJ+j) = disp; //save_edge.at<uchar>(rightI, rightJ);
+								save_edge.at<uchar>(rightI, rightJ+j) = disp; 
 							}
 						
 						}
 						
 						if(abs (save_edge.at<uchar>(rightI, rightJ-i) - save_edge.at<uchar>(rightI, rightJ) ) < 1)  {
-							//Lpass++;
 							for(int j=0; j<i+1; j++){
-
-								save_edge.at<uchar>(rightI, rightJ-j) = disp; //save_edge.at<uchar>(rightI, rightJ);
+								save_edge.at<uchar>(rightI, rightJ-j) = disp; 
 							}
 						
 						}
@@ -1105,16 +954,16 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	Mat closed = Mat::zeros(edge.size(), CV_8UC3);
 	Mat open = Mat::zeros(edge.size(), CV_8UC3);
 	
-	for( int i = 0; i< contours.size(); i++) //=hierarchy[i][0] ) // iterate through each contour.
+	for( int i = 0; i< contours.size(); i++) 
 	{
         Rect r= boundingRect(contours[i]);
 		
 		if( (r.width > 2*r.height) && r.width>100 ){
-		//	continue;
+//	continue;
 		}
 		
 		if( (r.height > 2*r.width) && r.height>100 ){
-		//	continue;
+//	continue;
 		}
 		
 		if(r.width*r.height<10000){
@@ -1165,12 +1014,9 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 			}
 			
 			if(depth!=0){ 
-				//std::cout<< i  <<" Z: " << z << "  J: " << j << " ____ " << depth <<std::endl;
-				//rectangle(drawing,Point(centerC, centerR) , Point(centerC+2, centerR+2), Scalar(255,0,0),2,8,0);
 				break;
 			}
 			
-			//std::cout<<std::endl;
 			
 		}
 		
@@ -1184,17 +1030,14 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		
 		float width = abs (rightX - leftX);
 		
-		//if(width<0.3) continue;
-		
-		
-		
+//if(width<0.3) continue;
 		
 		std::cout << "l: " <<leftX << " r: "<<rightX << "=" <<  width; // <<"x: " << midX << "  d: " << depth <<std::endl;
 		
 
 		if(leftYtop>2) continue;
 		if(depth>20) continue;
-		//if( abs (leftYtop-leftY) < 0.4) continue;
+//if( abs (leftYtop-leftY) < 0.4) continue;
 		
 		
 		sstm<<midX << "  " << depth;
@@ -1214,9 +1057,7 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 		int detected = 0;
 		
 		for (int cloud=0; cloud< cloudsize; cloud++){
-			
-			//std::cout << "(x,y,z) = " << point_cloud_C.points[cloud].x << std::endl;
-			
+						
 			if( abs (point_cloud_C.points[cloud].x - depth )-3 < 2.0 && abs (  -1*point_cloud_C.points[cloud].y - midX) - 3 < 2.0){
 				detected=1;
 				break;
@@ -1253,22 +1094,12 @@ void disparityImageCallback(const stereo_msgs::DisparityImageConstPtr& disparity
 	
 	cv::imshow("image", save_edge);
 	cv::imshow("imageR", drawing);
-	//cv::imshow("imageL", open);
+
 	cv::imshow("disparity color", dispar);
 	
 	
 	
-	//cv::imshow("disparity color", heightMap);
 
-
-	
-	/* //Image merging
-	double alpha = 0.5; double beta;
-	beta = ( 1.0 - alpha );
-	cv::Mat merge;
-	addWeighted( disparityCanny, alpha, edge, beta, 0.0, merge);
-	cv::imshow("view", merge);
-	*/
 	
 	std::cout << "Whole function time lapse:   " <<float( clock () - begin_time ) / (double) CLOCKS_PER_SEC<<std::endl;
 	std::cout << " Timend! " <<float( clock ())/  CLOCKS_PER_SEC<<std::endl << std::endl;
@@ -1293,7 +1124,7 @@ int main(int argc, char **argv){
 		cv::namedWindow("disparity color");
 		cv::namedWindow("DisparityEdge");
 		cv::namedWindow("CannyEdge");
-		//cv::namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+
 		cv::namedWindow("OpticalFlowFarneback");
 	
 		cv::startWindowThread();
@@ -1301,9 +1132,9 @@ int main(int argc, char **argv){
 		message_filters::Subscriber<stereo_msgs::DisparityImage> disp_sub(nh, "/camera/stereo_camera_LR/disparity", 10);
  		message_filters::Subscriber<Image> right_sub(nh, "/camera/stereo_camera_LR/right/image_raw", 10);
 		message_filters::Subscriber<Image> left_sub(nh, "/camera/stereo_camera_LR/left/image_raw", 10);
+    
+    
 		//message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub(nh, "/socket_node/can1_TrackPC", 10);
-	
-	
 		//ros::Subscriber sub = nh.subscribe<PointCloud>("points2", 1, callback);
 		
 	/*
@@ -1342,69 +1173,118 @@ int main(int argc, char **argv){
 
 
 
+	
+	//cv::Mat right = shiftFrame(last_image_R->image, 0, ShiftRight);
+	
 
+	//bilateralFilter(last_image_->image, edge2,-1, 50, 7);
+	
+	
+	//Canny( last_image_->image, edge, 60, 120, 3);
+	//Canny( edge2, edge, 60, 120, 3);
 
-
-
-
-
-
-
-
-
+	
 	/*
+	edge.convertTo(draw, CV_8U);
+	cv::imshow("CannyEdge", draw);
 	
-	TEST part START
+	std::cout << float( clock () - begin_time ) / (double) CLOCKS_PER_SEC<<"    ";
 	
+	
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	
+	findContours( edge, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) ); //CV_RETR_EXTERNAL  CV_RETR_TREE
+	
+	
+	
+	//Remove small conturs
+	
+	/*
+	to slow, have to work way around this
+	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
+	{
+   		if (it->size()<CONTUR_LENGTH_THRESHOLD)
+        	it=contours.erase(it);
+    	else
+        	++it;
+	}*/
+	
+	
+	/* also to slow
+	vector<Moments> ContArea(contours.size());
+	for( int i = 0; i < contours.size(); i++ )
+    {  
+        ContArea[i] = moments(contours[i], false);
+    }
+	
+	int iterMoment=0;
+	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
+	{
+   		if (ContArea[iterMoment].m00 < 100)
+        	it=contours.erase(it);
+    	else
+        	++it;
+		
+		iterMoment++;
+	}
 	*/
 	
-/*
-  //Create matrix that will contain 3D corrdinates of each pixel
-  cv::Mat recons3D(dispar.size(), CV_32FC3);
-  
-  //Reproject image to 3D
-  std::cout << "Reprojecting image to 3D..." << std::endl;
-  cv::reprojectImageTo3D( dispar, recons3D, Q, false, CV_32F );
 	
 	
+	/*
+	  /// Approximate contours to polygons + get bounding rects and circles
+	  /// finding conturs takes too much time, not god for rest of processing
+	  
+  vector<vector<Point> > contours_poly( contours.size() );
+  vector<Rect> boundRect( contours.size() );
+  vector<Point2f>center( contours.size() );
+  vector<float>radius( contours.size() );
 
-  //Create point cloud and fill it
-  std::cout << "Creating Point Cloud..." <<std::endl;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-  
-  float px, py, pz;
-  uchar pr, pg, pb;
-  
-  for (int i = 0; i < recons3D.rows; i++)
-  {
-
-    float* recons_ptr = recons3D.ptr<float>(i);
-
-    for (int j = 0; j < recons3D.cols; j++)
-    {
-      //Get 3D coordinates
-
-      px = (float)recons_ptr[3*j];
-      py = (float)recons_ptr[3*j+1];
-      pz = (float)recons_ptr[3*j+2];
-
-     // std::cout<<"3d: "<<px<<"  "<<py<<"  "<<pz<<recons3D<<std::endl;
-      
-      //Insert info into point cloud structure
-      pcl::PointXYZRGB point;
-      point.x = px;
-      point.y = py;
-      point.z = pz;
-	  point.rgb = 21921;
-
-      point_cloud_ptr->points.push_back (point);
-    }
-  }
-  point_cloud_ptr->width = (int) point_cloud_ptr->points.size();
-  point_cloud_ptr->height = 1;
-  
-  //Create visualizer
-	//boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
-
-
+  for( int i = 0; i < contours.size(); i++ )
+     { 
+	  approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+	  
+      boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+	  if(boundRect[i].width * boundRect[i].height < 500 || 
+		boundRect[i].width*3<boundRect[i].height ||
+		boundRect[i].width>boundRect[i].height*3){
+			contours.erase(contours.begin()+i);
+			boundRect.erase(boundRect.begin()+i);
+		  i--;
+	  }
+	  
+       //minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
+     }
 	
+
+
+	/// Draw contours
+	Mat drawing = Mat::zeros( edge.size(), CV_8UC3 );
+	for( int i = 0; i< contours.size(); i++ )
+	{
+		Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+		drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
+
+	}
+
+	/// Show in a window
+
+	imshow( "Contours", drawing );
+	*/
+	
+	
+		/*
+	int iterMoment=0;
+	for (vector<vector<Point> >::iterator it = contours.begin(); it!=contours.end(); )
+	{
+   		if (boundRect[iterMoment].size() < 100)
+        	it=contours.erase(it);
+    	else
+        	++it;
+		
+		iterMoment++;
+	}
+	*/
+	
+
